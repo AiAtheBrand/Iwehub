@@ -8,11 +8,17 @@ function BookCard({ book, onDelete }) {
   return (
     <article className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 transition duration-300 hover:-translate-y-1 hover:shadow-xl">
       <div className="relative overflow-hidden bg-gray-100">
-        <img
-          src={book.cover_image}
-          alt={book.title}
-          className="h-80 w-full object-cover transition duration-500 group-hover:scale-105"
-        />
+        {book.cover_image ? (
+          <img
+            src={book.cover_image}
+            alt={book.title}
+            className="h-80 w-full object-cover transition duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-80 w-full items-center justify-center text-sm text-gray-400">
+            No cover
+          </div>
+        )}
       </div>
 
       <div className="p-5">

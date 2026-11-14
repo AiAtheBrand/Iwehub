@@ -42,6 +42,15 @@ describe("BookCard", () => {
     expect(screen.getByText(/0 reads/)).toBeInTheDocument();
   });
 
+  it("shows a placeholder when there is no cover image", () => {
+    renderCard({ ...baseBook, cover_image: "" });
+
+    expect(screen.getByText(/no cover/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: "Pride and Prejudice" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("navigates to the detail route when View is clicked", () => {
     function Location() {
       return <div data-testid="location">{useLocation().pathname}</div>;
