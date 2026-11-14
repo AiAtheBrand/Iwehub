@@ -1,0 +1,189 @@
+import { useMemo, useState } from "react";
+import BookCard from "./BookCard";
+import AddBookForm from "./AddBookForm";
+import { useBooks } from "../hooks/useBooks";
+import { useLibraryBooks } from "../hooks/useLibraryBooks";
+import { useLocalStorage } from "../hooks/useLocalStorage";
+
+/**
+ * The signed-in experience: the Gutenberg catalogue merged with the shared
+ * library, plus search, add and delete. Mounted only for authenticated users so
+ * the catalogue proxy and the library query are not called on the sign-in
+ * screen.
+ */
+function Library({ user, onSignOut }) {
+  const {
+    books: catalogBooks,
+    loading: catalogLoading,
+    error: catalogError,
+  } = useBooks();
+  const {
+    books: libraryBooks,
+    loading: libraryLoading,
+    error: libraryError,
+    addBook,
+    removeBook,
+  } = useLibraryBooks();
+
+  // Only Gutenberg-catalogue deletions are stored locally; shared library
+  // books are deleted from the database for everyone.
+  const [deletedIds, setDeletedIds] = useLocalStorage(
+    "gutenberg:deletedIds",
+    [],
+  );
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
+  const loading = catalogLoading || libraryLoading;
+  const error = catalogError || libraryError;
+
+  // Merge the shared library with the Gutenberg catalogue, hide deleted
+  // catalogue books, and apply the search term (title or first author).
+  const books = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const catalog = catalogBooks.map((book) => ({
+      ...book,
+      source: "gutenberg",
+    }));
+
+    return [...libraryBooks, ...catalog].filter((book) => {
+      if (book.source === "gutenberg" && deletedIds.includes(book.id)) {
+        return false;
+      }
+      if (!term) return true;
+
+      const title = book.title?.toLowerCase() ?? "";
+      const author = book.authors?.[0]?.name?.toLowerCase() ?? "";
+      return title.includes(term) || author.includes(term);
+    });
+  }, [libraryBooks, catalogBooks, deletedIds, search]);
+
+  async function handleAdd(draft) {
+    setActionError(null);
+    try {
+      await addBook(draft);
+      setShowForm(false);
+    } catch (err) {
+      setActionError(err);
+    }
+  }
+
+  async function handleDelete(book) {
+    setActionError(null);
+    try {
+      if (book.source === "library") {
+        await removeBook(book.id);
+      } else {
+        setDeletedIds((prev) =>
+          prev.includes(book.id) ? prev : [...prev, book.id],
+        );
+      }
+    } catch (err) {
+      setActionError(err);
+    }
+  }
+
+  async function handleSignOut() {
+    setActionError(null);
+    try {
+      await onSignOut();
+    } catch (err) {
+      setActionError(err);
+    }
+  }
+
+  // A book can be deleted when the user owns the library row, or when it is a
+  // local catalogue entry (hidden just for them).
+  function canDelete(book) {
+    if (book.source === "gutenberg") return true;
+    return book.ownerId === user?.id;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-10">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-4xl font-bold text-blue-600">Gutenberg Books</h1>
+
+        {user && (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-gray-700">
+              Signed in as {user.email}
+            </span>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 flex flex-col items-start gap-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by title or author"
+          aria-label="Search books"
+          className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
+        />
+
+        <button
+          type="button"
+          onClick={() => setShowForm((visible) => !visible)}
+          aria-expanded={showForm}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          {showForm ? "Cancel" : "Add book"}
+        </button>
+      </div>
+
+      {showForm && <AddBookForm onAdd={handleAdd} />}
+
+      {loading && (
+        <p className="mt-4 text-gray-600" role="status">
+          Loading books…
+        </p>
+      )}
+
+      {error && (
+        <p className="mt-4 text-red-600" role="alert">
+          Could not load books. Please try again later.
+        </p>
+      )}
+
+      {actionError && (
+        <p className="mt-4 text-red-600" role="alert">
+          Something went wrong: {actionError.message}
+        </p>
+      )}
+
+      {!loading && !error && (
+        <>
+          <p className="mt-4 text-gray-600">
+            Number of books: {books.length}
+          </p>
+
+          {books.length === 0 ? (
+            <p className="mt-8 text-gray-500">No books found.</p>
+          ) : (
+            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {books.map((book) => (
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  onDelete={canDelete(book) ? handleDelete : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export default Library;

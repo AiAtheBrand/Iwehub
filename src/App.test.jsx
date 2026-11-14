@@ -138,7 +138,7 @@ describe("App", () => {
 
     renderApp();
 
-    await screen.findByText(/no books found/i);
+    await screen.findByRole("heading", { name: /sign in/i });
 
     expect(
       screen.queryByRole("button", { name: /^add book$/i }),
@@ -146,9 +146,9 @@ describe("App", () => {
     expect(screen.queryByLabelText("Book title")).not.toBeInTheDocument();
   });
 
-  it("shows the auth form when signed out", async () => {
+  it("shows the auth form and hides the library when signed out", async () => {
     useAuth.mockReturnValue(authState({ user: null }));
-    api.getBooks.mockResolvedValue([]);
+    api.getBooks.mockResolvedValue([makeBook()]);
 
     renderApp();
 
@@ -157,6 +157,24 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
+
+    // The library itself is gated behind sign-in.
+    expect(
+      screen.queryByRole("searchbox", { name: "Search books" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Book One" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a loading state while the session is being checked", () => {
+    useAuth.mockReturnValue(authState({ user: null, loading: true }));
+    api.getBooks.mockResolvedValue([]);
+
+    renderApp();
+
+    expect(screen.getByRole("status")).toHaveTextContent(/loading/i);
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
   });
 
   it("reveals the add form only after clicking Add book", async () => {
