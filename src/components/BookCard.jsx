@@ -45,7 +45,7 @@ function BookCard({ book, onDelete }) {
             {onDelete && (
               <button
                 type="button"
-                onClick={() => onDelete(book.id)}
+                onClick={() => onDelete(book)}
                 aria-label={`Delete ${book.title}`}
                 className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
               >

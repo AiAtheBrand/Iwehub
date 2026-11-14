@@ -2,44 +2,80 @@ import { useMemo, useState } from "react";
 import BookCard from "./components/BookCard";
 import AddBookForm from "./components/AddBookForm";
 import { useBooks } from "./hooks/useBooks";
+import { useLibraryBooks } from "./hooks/useLibraryBooks";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 
 function App() {
-  const { books: fetchedBooks, loading, error } = useBooks();
-  const [addedBooks, setAddedBooks] = useLocalStorage(
-    "gutenberg:addedBooks",
-    [],
-  );
+  const {
+    books: catalogBooks,
+    loading: catalogLoading,
+    error: catalogError,
+  } = useBooks();
+  const {
+    books: libraryBooks,
+    loading: libraryLoading,
+    error: libraryError,
+    addBook,
+    removeBook,
+  } = useLibraryBooks();
+
+  // Only Gutenberg-catalogue deletions are stored locally; shared library
+  // books are deleted from the database for everyone.
   const [deletedIds, setDeletedIds] = useLocalStorage(
     "gutenberg:deletedIds",
     [],
   );
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [actionError, setActionError] = useState(null);
 
-  // Combine the fetched catalog with locally added books, drop deleted ones,
-  // and apply the search term (title or first author).
+  const loading = catalogLoading || libraryLoading;
+  const error = catalogError || libraryError;
+
+  // Merge the shared library with the Gutenberg catalogue, hide deleted
+  // catalogue books, and apply the search term (title or first author).
   const books = useMemo(() => {
     const term = search.trim().toLowerCase();
+    const catalog = catalogBooks.map((book) => ({
+      ...book,
+      source: "gutenberg",
+    }));
 
-    return [...addedBooks, ...fetchedBooks].filter((book) => {
-      if (deletedIds.includes(book.id)) return false;
+    return [...libraryBooks, ...catalog].filter((book) => {
+      if (book.source === "gutenberg" && deletedIds.includes(book.id)) {
+        return false;
+      }
       if (!term) return true;
 
       const title = book.title?.toLowerCase() ?? "";
       const author = book.authors?.[0]?.name?.toLowerCase() ?? "";
       return title.includes(term) || author.includes(term);
     });
-  }, [addedBooks, fetchedBooks, deletedIds, search]);
+  }, [libraryBooks, catalogBooks, deletedIds, search]);
 
-  function handleAdd(book) {
-    setAddedBooks((prev) => [book, ...prev]);
-    setShowForm(false);
+  async function handleAdd(draft) {
+    setActionError(null);
+    try {
+      await addBook(draft);
+      setShowForm(false);
+    } catch (err) {
+      setActionError(err);
+    }
   }
 
-  function handleDelete(id) {
-    setAddedBooks((prev) => prev.filter((book) => book.id !== id));
-    setDeletedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  async function handleDelete(book) {
+    setActionError(null);
+    try {
+      if (book.source === "library") {
+        await removeBook(book.id);
+      } else {
+        setDeletedIds((prev) =>
+          prev.includes(book.id) ? prev : [...prev, book.id],
+        );
+      }
+    } catch (err) {
+      setActionError(err);
+    }
   }
 
   return (
@@ -77,6 +113,12 @@ function App() {
       {error && (
         <p className="mt-4 text-red-600" role="alert">
           Could not load books. Please try again later.
+        </p>
+      )}
+
+      {actionError && (
+        <p className="mt-4 text-red-600" role="alert">
+          Something went wrong: {actionError.message}
         </p>
       )}
 

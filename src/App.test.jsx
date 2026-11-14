@@ -4,8 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 import * as api from "./api/books";
+import * as library from "./api/library";
 
 vi.mock("./api/books");
+vi.mock("./api/library");
 
 function makeBook(overrides) {
   return {
@@ -14,6 +16,18 @@ function makeBook(overrides) {
     authors: [{ name: "Author One" }],
     download_count: 5,
     cover_image: "",
+    ...overrides,
+  };
+}
+
+function makeLibraryBook(overrides) {
+  return {
+    id: "lib-1",
+    title: "Shared Book",
+    authors: [{ name: "Someone" }],
+    cover_image: "",
+    download_count: 0,
+    source: "library",
     ...overrides,
   };
 }
@@ -29,6 +43,9 @@ function renderApp() {
 describe("App", () => {
   beforeEach(() => {
     api.getBooks.mockReset();
+    library.listLibraryBooks.mockReset().mockResolvedValue([]);
+    library.addLibraryBook.mockReset();
+    library.deleteLibraryBook.mockReset().mockResolvedValue(undefined);
   });
 
   it("shows a loading state, then renders the fetched books", async () => {
@@ -100,9 +117,12 @@ describe("App", () => {
     expect(screen.getByLabelText("Cover image")).toBeInTheDocument();
   });
 
-  it("adds a book through the form and hides the form again", async () => {
+  it("adds a book to the shared library and hides the form", async () => {
     const user = userEvent.setup();
     api.getBooks.mockResolvedValue([]);
+    library.addLibraryBook.mockResolvedValue(
+      makeLibraryBook({ id: "lib-new", title: "My New Book" }),
+    );
 
     renderApp();
 
@@ -113,13 +133,32 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /^add book$/i }));
 
     expect(
-      screen.getByRole("heading", { name: "My New Book" }),
+      await screen.findByRole("heading", { name: "My New Book" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/number of books: 1/i)).toBeInTheDocument();
+    expect(library.addLibraryBook).toHaveBeenCalledOnce();
     expect(screen.queryByLabelText("Book title")).not.toBeInTheDocument();
   });
 
-  it("deletes a book from the grid", async () => {
+  it("deletes a shared library book from the database", async () => {
+    const user = userEvent.setup();
+    api.getBooks.mockResolvedValue([]);
+    library.listLibraryBooks.mockResolvedValue([makeLibraryBook()]);
+
+    renderApp();
+
+    await screen.findByRole("heading", { name: "Shared Book" });
+
+    await user.click(
+      screen.getByRole("button", { name: /delete shared book/i }),
+    );
+
+    expect(library.deleteLibraryBook).toHaveBeenCalledWith("lib-1");
+    expect(
+      screen.queryByRole("heading", { name: "Shared Book" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("deletes a Gutenberg book locally", async () => {
     const user = userEvent.setup();
     api.getBooks.mockResolvedValue([makeBook()]);
 
@@ -131,38 +170,14 @@ describe("App", () => {
       screen.getByRole("button", { name: /delete book one/i }),
     );
 
+    expect(library.deleteLibraryBook).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("heading", { name: "Book One" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/no books found/i)).toBeInTheDocument();
   });
 
-  it("persists added books across remounts", async () => {
-    const user = userEvent.setup();
-    api.getBooks.mockResolvedValue([]);
-
-    const { unmount } = renderApp();
-    await screen.findByText(/no books found/i);
-
-    await user.click(screen.getByRole("button", { name: /^add book$/i }));
-    await user.type(screen.getByLabelText("Book title"), "Persisted Book");
-    await user.click(screen.getByRole("button", { name: /^add book$/i }));
-
-    expect(
-      screen.getByRole("heading", { name: "Persisted Book" }),
-    ).toBeInTheDocument();
-
-    unmount();
-
-    api.getBooks.mockResolvedValue([]);
-    renderApp();
-
-    expect(
-      await screen.findByRole("heading", { name: "Persisted Book" }),
-    ).toBeInTheDocument();
-  });
-
-  it("persists deletions across remounts", async () => {
+  it("persists Gutenberg deletions across remounts", async () => {
     const user = userEvent.setup();
     api.getBooks.mockResolvedValue([makeBook()]);
 

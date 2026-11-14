@@ -78,7 +78,7 @@ describe("BookCard", () => {
       screen.getByRole("button", { name: /delete pride and prejudice/i }),
     );
 
-    expect(onDelete).toHaveBeenCalledWith(1342);
+    expect(onDelete).toHaveBeenCalledWith(baseBook);
   });
 
   it("hides the delete button when no handler is provided", () => {

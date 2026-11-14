@@ -1,32 +1,40 @@
 # Gutenberg Books
 
-A small React single-page app that browses public-domain books from the
-[Project Gutenberg Free Books API](https://rapidapi.com/) (via RapidAPI) and
-shows a detail page for each title.
+A React single-page app that browses public-domain books from the
+[Project Gutenberg Free Books API](https://rapidapi.com/) and lets users add
+their own books to a **shared library** backed by Supabase (Postgres).
 
-The browser never talks to RapidAPI directly: a tiny Express server holds the
-API key and proxies the requests, so the secret is never shipped to the client.
+The browser never talks to RapidAPI directly: a small Express server holds the
+API key and proxies those requests. Supabase is accessed directly from the
+browser using its **public anon key**, which is safe to expose because Row Level
+Security (RLS) enforces access on the server.
 
 ## Tech stack
 
-- **React 19** + **Vite 8** (dev server & bundler)
-- **react-router-dom 7** (client-side routing)
-- **Tailwind CSS 4** (utility-first styling, via `@tailwindcss/vite`)
-- **Express 5** (API proxy / static server)
+- **React 19** + **Vite 8**
+- **react-router-dom 7** (routing)
+- **Tailwind CSS 4** (styling)
+- **Express 5** (RapidAPI proxy / static server)
+- **Supabase** (Postgres database + storage + auto REST API)
 - **Vitest** + **Testing Library** + **jsdom** (tests)
 
 ## Architecture
 
 ```
-Browser ──/api/books──▶ Express (server/index.js) ──▶ RapidAPI
-   ▲                          │  (injects x-rapidapi-key from .env)
-   │                          │
-   └── SPA assets ◀───────────┘  serves dist/ in production
+                    ┌───────────────┐
+   catalog ────────▶│ Express proxy │──────▶ RapidAPI (Project Gutenberg)
+                    └───────────────┘
+Browser ──▶ React
+   │                ┌───────────────┐
+   └── shared ─────▶│   Supabase    │  (Postgres table `books` + storage `covers`)
+      library       └───────────────┘
 ```
 
-- In **development**, Vite serves the SPA and proxies `/api/*` to the Express
-  server (`vite.config.js` → `server.proxy`).
-- In **production**, Express serves both the built `dist/` assets and `/api/*`.
+- The **Gutenberg catalogue** is read-only and fetched through the Express proxy.
+- The **shared library** (books users add) lives in Supabase and is visible to
+  everyone. Cover images are uploaded to Supabase Storage.
+- Deleting a **library** book removes it for everyone; deleting a **catalogue**
+  book only hides it locally (stored in `localStorage`).
 
 ## Getting started
 
@@ -36,20 +44,29 @@ Browser ──/api/books──▶ Express (server/index.js) ──▶ RapidAPI
    npm install
    ```
 
-2. Create your local environment file from the template and fill in your own
-   RapidAPI credentials:
+2. Create your env file:
 
    ```bash
    cp .env.example .env
    ```
 
-   ```
-   RAPIDAPI_KEY=your-rapidapi-key-here
-   RAPIDAPI_HOST=project-gutenberg-free-books-api1.p.rapidapi.com
-   PORT=8787
-   ```
+3. **Supabase setup** (one time):
 
-3. Start the API server **and** the Vite dev server together:
+   1. Create a project at [supabase.com](https://supabase.com).
+   2. Open **SQL Editor → New query**, paste the contents of
+      [`supabase/schema.sql`](supabase/schema.sql), and run it. This creates the
+      `books` table, the `covers` storage bucket, and the access policies.
+   3. Open **Project Settings → API** and copy the **Project URL** and the
+      **anon public** key into `.env`:
+
+      ```
+      VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+      VITE_SUPABASE_ANON_KEY=your-anon-key
+      ```
+
+4. Fill in your RapidAPI credentials in `.env` (see `.env.example`).
+
+5. Run the API server **and** the Vite dev server together:
 
    ```bash
    npm run dev:all
@@ -63,7 +80,7 @@ Browser ──/api/books──▶ Express (server/index.js) ──▶ RapidAPI
 | --- | --- |
 | `npm run dev:all` | Run the API server and Vite dev server together |
 | `npm run server` | Run only the API proxy server |
-| `npm run dev` | Run only the Vite dev server (expects the API server) |
+| `npm run dev` | Run only the Vite dev server |
 | `npm run build` | Production build into `dist/` |
 | `npm start` | Serve `dist/` + `/api` from Express (production) |
 | `npm run lint` | Run ESLint |
@@ -74,28 +91,35 @@ Browser ──/api/books──▶ Express (server/index.js) ──▶ RapidAPI
 ## Project structure
 
 ```
-server/
-└── index.js            # Express API proxy + static file server
+server/index.js          # Express proxy + static server
+supabase/schema.sql      # Database schema, policies, storage bucket
 src/
-├── api/books.js        # API client (getBooks, getBook) -> calls /api/*
+├── lib/supabase.js      # Supabase client (guarded by env vars)
+├── api/
+│   ├── books.js         # Gutenberg catalogue client (via /api proxy)
+│   └── library.js       # Supabase library client (list/add/delete)
 ├── hooks/
-│   ├── useBooks.js     # Loads the book list
-│   └── useBook.js      # Loads a single book by id
+│   ├── useBooks.js      # Loads the catalogue
+│   ├── useLibraryBooks.js # Loads + mutates the shared library
+│   └── useLocalStorage.js # Persists local state (catalogue deletions)
 ├── components/
-│   ├── BookCard.jsx    # Grid card for one book
-│   └── BookDetails.jsx # Detail page for one book
-├── router/router.jsx   # Route table ("/" and "/books/:id")
-├── App.jsx             # Home page
-├── main.jsx            # Entry point (mounts the router)
-└── index.css           # Tailwind entry
+│   ├── BookCard.jsx
+│   ├── BookDetails.jsx
+│   └── AddBookForm.jsx
+├── router/router.jsx
+├── App.jsx
+└── main.jsx
 ```
 
 ## Security notes
 
-- The API key lives in `.env` (gitignored) and is read **only** by the server,
-  so it is not included in the browser bundle.
-- If a key is ever committed or shared, rotate it. The key that previously
-  lived in the client source should be treated as compromised.
+- The **RapidAPI key** is server-side only (`.env`, no `VITE_` prefix) and is
+  never sent to the browser.
+- The **Supabase anon key** is intentionally public; protect your data with RLS
+  policies (see `supabase/schema.sql`).
+- The current RLS policies allow **anyone** to add/delete library books for
+  demo purposes. Add authentication before exposing this publicly.
+- Rotate the RapidAPI key if it was ever committed.
 
 ## Continuous integration
 
