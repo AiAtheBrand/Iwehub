@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import BookCard from "./components/BookCard";
 import AddBookForm from "./components/AddBookForm";
+import AuthForm from "./components/AuthForm";
+import { useAuth } from "./hooks/useAuth";
 import { useBooks } from "./hooks/useBooks";
 import { useLibraryBooks } from "./hooks/useLibraryBooks";
 import { useLocalStorage } from "./hooks/useLocalStorage";
@@ -18,6 +20,14 @@ function App() {
     addBook,
     removeBook,
   } = useLibraryBooks();
+  const {
+    user,
+    loading: authLoading,
+    configured: authConfigured,
+    signIn,
+    signUp,
+    signOut,
+  } = useAuth();
 
   // Only Gutenberg-catalogue deletions are stored locally; shared library
   // books are deleted from the database for everyone.
@@ -78,9 +88,47 @@ function App() {
     }
   }
 
+  async function handleSignOut() {
+    setActionError(null);
+    try {
+      await signOut();
+    } catch (err) {
+      setActionError(err);
+    }
+  }
+
+  // A book can be deleted when the visitor is signed in AND either it is a
+  // local catalogue entry (hidden just for them) or they own the library row.
+  function canDelete(book) {
+    if (!user) return false;
+    if (book.source === "gutenberg") return true;
+    return book.ownerId === user.id;
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 p-10">
       <h1 className="text-4xl font-bold text-blue-600">Gutenberg Books</h1>
+
+      {authConfigured && !authLoading && (
+        <div className="mt-4">
+          {user ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-gray-700">
+                Signed in as {user.email}
+              </span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <AuthForm onSignIn={signIn} onSignUp={signUp} />
+          )}
+        </div>
+      )}
 
       <div className="mt-6 flex flex-col items-start gap-3">
         <input
@@ -92,17 +140,19 @@ function App() {
           className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
         />
 
-        <button
-          type="button"
-          onClick={() => setShowForm((visible) => !visible)}
-          aria-expanded={showForm}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-        >
-          {showForm ? "Cancel" : "Add book"}
-        </button>
+        {user && (
+          <button
+            type="button"
+            onClick={() => setShowForm((visible) => !visible)}
+            aria-expanded={showForm}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+          >
+            {showForm ? "Cancel" : "Add book"}
+          </button>
+        )}
       </div>
 
-      {showForm && <AddBookForm onAdd={handleAdd} />}
+      {user && showForm && <AddBookForm onAdd={handleAdd} />}
 
       {loading && (
         <p className="mt-4 text-gray-600" role="status">
@@ -133,7 +183,11 @@ function App() {
           ) : (
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {books.map((book) => (
-                <BookCard key={book.id} book={book} onDelete={handleDelete} />
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  onDelete={canDelete(book) ? handleDelete : undefined}
+                />
               ))}
             </div>
           )}

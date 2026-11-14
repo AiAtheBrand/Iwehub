@@ -5,9 +5,26 @@ import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 import * as api from "./api/books";
 import * as library from "./api/library";
+import { useAuth } from "./hooks/useAuth";
 
 vi.mock("./api/books");
 vi.mock("./api/library");
+vi.mock("./hooks/useAuth");
+
+const USER = { id: "user-1", email: "reader@example.com" };
+
+/** Build a `useAuth` return value; signed in by default. */
+function authState(overrides = {}) {
+  return {
+    user: USER,
+    loading: false,
+    configured: true,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+    ...overrides,
+  };
+}
 
 function makeBook(overrides) {
   return {
@@ -28,6 +45,7 @@ function makeLibraryBook(overrides) {
     cover_image: "",
     download_count: 0,
     source: "library",
+    ownerId: USER.id,
     ...overrides,
   };
 }
@@ -46,6 +64,7 @@ describe("App", () => {
     library.listLibraryBooks.mockReset().mockResolvedValue([]);
     library.addLibraryBook.mockReset();
     library.deleteLibraryBook.mockReset().mockResolvedValue(undefined);
+    useAuth.mockReturnValue(authState());
   });
 
   it("shows a loading state, then renders the fetched books", async () => {
@@ -100,6 +119,46 @@ describe("App", () => {
     expect(screen.getByText(/number of books: 1/i)).toBeInTheDocument();
   });
 
+  it("shows the signed-in user and the add button when authenticated", async () => {
+    api.getBooks.mockResolvedValue([]);
+
+    renderApp();
+
+    await screen.findByText(/no books found/i);
+
+    expect(screen.getByText(/signed in as reader@example.com/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^add book$/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the add button and form when signed out", async () => {
+    useAuth.mockReturnValue(authState({ user: null }));
+    api.getBooks.mockResolvedValue([]);
+
+    renderApp();
+
+    await screen.findByText(/no books found/i);
+
+    expect(
+      screen.queryByRole("button", { name: /^add book$/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Book title")).not.toBeInTheDocument();
+  });
+
+  it("shows the auth form when signed out", async () => {
+    useAuth.mockReturnValue(authState({ user: null }));
+    api.getBooks.mockResolvedValue([]);
+
+    renderApp();
+
+    expect(
+      await screen.findByRole("heading", { name: /sign in/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+  });
+
   it("reveals the add form only after clicking Add book", async () => {
     const user = userEvent.setup();
     api.getBooks.mockResolvedValue([]);
@@ -139,7 +198,7 @@ describe("App", () => {
     expect(screen.queryByLabelText("Book title")).not.toBeInTheDocument();
   });
 
-  it("deletes a shared library book from the database", async () => {
+  it("deletes a shared library book the user owns", async () => {
     const user = userEvent.setup();
     api.getBooks.mockResolvedValue([]);
     library.listLibraryBooks.mockResolvedValue([makeLibraryBook()]);
@@ -155,6 +214,21 @@ describe("App", () => {
     expect(library.deleteLibraryBook).toHaveBeenCalledWith("lib-1");
     expect(
       screen.queryByRole("heading", { name: "Shared Book" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the delete button on books owned by someone else", async () => {
+    api.getBooks.mockResolvedValue([]);
+    library.listLibraryBooks.mockResolvedValue([
+      makeLibraryBook({ ownerId: "someone-else" }),
+    ]);
+
+    renderApp();
+
+    await screen.findByRole("heading", { name: "Shared Book" });
+
+    expect(
+      screen.queryByRole("button", { name: /delete shared book/i }),
     ).not.toBeInTheDocument();
   });
 

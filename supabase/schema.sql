@@ -1,6 +1,7 @@
 -- ============================================================================
 -- Gutenberg Books - Supabase schema
 -- Run this in the Supabase dashboard: SQL Editor -> New query -> paste -> Run.
+-- Safe to re-run: it drops and recreates the policies.
 -- ============================================================================
 
 -- Shared catalogue: every user sees every row.
@@ -9,30 +10,38 @@ create table if not exists public.books (
   title text not null,
   author text,
   cover_url text,
+  created_by uuid default auth.uid() references auth.users (id) on delete cascade,
   created_at timestamptz not null default now()
 );
 
+-- Upgrade an older table created before auth existed.
+alter table public.books
+  add column if not exists created_by uuid default auth.uid()
+    references auth.users (id) on delete cascade;
+
 alter table public.books enable row level security;
 
--- Anyone (including anonymous visitors) can read the library.
+-- READ: everyone (including anonymous visitors).
 drop policy if exists "Books are viewable by everyone" on public.books;
 create policy "Books are viewable by everyone"
   on public.books for select
   using (true);
 
--- Anyone can add a book.
--- NOTE: this is intentionally open for a demo. Add auth before going live.
+-- INSERT: only signed-in users, and the row must belong to them.
 drop policy if exists "Anyone can add a book" on public.books;
-create policy "Anyone can add a book"
+drop policy if exists "Authenticated users can add books" on public.books;
+create policy "Authenticated users can add books"
   on public.books for insert
-  with check (true);
+  to authenticated
+  with check (auth.uid() = created_by);
 
--- Anyone can delete a book.
--- NOTE: same caveat as above - restrict this once you have user accounts.
+-- DELETE: only the user who added the book.
 drop policy if exists "Anyone can delete a book" on public.books;
-create policy "Anyone can delete a book"
+drop policy if exists "Users can delete their own books" on public.books;
+create policy "Users can delete their own books"
   on public.books for delete
-  using (true);
+  to authenticated
+  using (auth.uid() = created_by);
 
 -- ---------------------------------------------------------------------------
 -- Storage bucket for cover images.
@@ -47,6 +56,8 @@ create policy "Covers are publicly readable"
   using (bucket_id = 'covers');
 
 drop policy if exists "Anyone can upload a cover" on storage.objects;
-create policy "Anyone can upload a cover"
+drop policy if exists "Authenticated users can upload covers" on storage.objects;
+create policy "Authenticated users can upload covers"
   on storage.objects for insert
+  to authenticated
   with check (bucket_id = 'covers');

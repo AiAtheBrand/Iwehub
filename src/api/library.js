@@ -12,6 +12,7 @@ function toBook(row) {
     cover_image: row.cover_url ?? "",
     download_count: 0,
     source: "library",
+    ownerId: row.created_by ?? null,
   };
 }
 
