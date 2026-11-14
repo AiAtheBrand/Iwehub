@@ -34,7 +34,8 @@ Browser ──▶ React
 
 - The **Gutenberg catalogue** is read-only and fetched through the Express proxy.
 - The **shared library** (books users add) lives in Supabase and is visible to
-  everyone. Cover images are uploaded to Supabase Storage.
+  everyone. Cover images **and the book files themselves** are uploaded to
+  Supabase Storage, so shared books can be downloaded by anyone.
 - Adding a book requires **signing in**. Deleting a **library** book is allowed
   only for the user who added it; deleting a **catalogue** book only hides it
   locally (stored in `localStorage`).
@@ -135,8 +136,8 @@ rules on the server, so the client can never bypass them:
 | Read books | everyone (including anonymous visitors) |
 | Insert a book | signed-in users, and `created_by` must equal their user id |
 | Delete a book | only the user who created it (`auth.uid() = created_by`) |
-| Read covers | everyone |
-| Upload a cover | signed-in users |
+| Read covers / book files | everyone |
+| Upload a cover / book file | signed-in users |
 
 Because `created_by` defaults to `auth.uid()`, the database stamps ownership
 automatically when an authenticated user inserts a row.

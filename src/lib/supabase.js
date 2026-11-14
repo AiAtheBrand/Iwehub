@@ -14,3 +14,6 @@ export const isSupabaseConfigured = Boolean(url && anonKey);
 export const supabase = isSupabaseConfigured ? createClient(url, anonKey) : null;
 
 export const COVERS_BUCKET = "covers";
+
+/** Storage bucket holding the uploaded book files themselves. */
+export const BOOK_FILES_BUCKET = "book-files";

@@ -1,4 +1,8 @@
-import { COVERS_BUCKET, supabase } from "../lib/supabase";
+import {
+  BOOK_FILES_BUCKET,
+  COVERS_BUCKET,
+  supabase,
+} from "../lib/supabase";
 
 const NOT_CONFIGURED =
   "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.";
@@ -13,6 +17,8 @@ function toBook(row) {
     download_count: 0,
     source: "library",
     ownerId: row.created_by ?? null,
+    fileUrl: row.file_url ?? "",
+    fileName: row.file_name ?? "",
   };
 }
 
@@ -24,6 +30,12 @@ function dataUrlToBlob(dataUrl) {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type });
+}
+
+/** Lower-case extension of a filename, including the dot ("" when none). */
+function extensionOf(name) {
+  const match = /\.[a-z0-9]+$/i.exec(name ?? "");
+  return match ? match[0].toLowerCase() : "";
 }
 
 /** Fetch every book in the shared library, newest first. */
@@ -40,8 +52,12 @@ export async function listLibraryBooks() {
 }
 
 /**
- * Add a book to the shared library. If the draft carries an image (as a data
- * URL), it is uploaded to the `covers` storage bucket and its public URL saved.
+ * Add a book to the shared library.
+ *
+ * Two optional uploads happen first, each stored under a random name:
+ * - the cover image (a base64 data URL from the picker) -> `covers` bucket
+ * - the book file itself (a File) -> `book-files` bucket
+ * Only their public URLs are written to the row.
  */
 export async function addLibraryBook(draft) {
   if (!supabase) throw new Error(NOT_CONFIGURED);
@@ -63,12 +79,35 @@ export async function addLibraryBook(draft) {
       .getPublicUrl(path).data.publicUrl;
   }
 
+  let fileUrl = "";
+  let fileName = "";
+
+  if (draft.file) {
+    const path = `${crypto.randomUUID()}${extensionOf(draft.file.name)}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(BOOK_FILES_BUCKET)
+      .upload(path, draft.file, {
+        contentType: draft.file.type || "application/octet-stream",
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    fileUrl = supabase.storage
+      .from(BOOK_FILES_BUCKET)
+      .getPublicUrl(path).data.publicUrl;
+    fileName = draft.file.name;
+  }
+
   const { data, error } = await supabase
     .from("books")
     .insert({
       title: draft.title,
       author: draft.authors?.[0]?.name ?? null,
       cover_url: coverUrl,
+      file_url: fileUrl,
+      file_name: fileName,
     })
     .select()
     .single();

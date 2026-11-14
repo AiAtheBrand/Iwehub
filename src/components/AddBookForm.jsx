@@ -1,15 +1,18 @@
 import { useRef, useState } from "react";
 
 /**
- * A small form that lets the user add a book to the local grid.
- * The public API is read-only, so added books live only in the app state.
- * The cover image is read from the chosen file and stored as a data URL.
+ * A small form that adds a book to the shared library.
+ * The cover image is read from the chosen file and stored as a data URL so it
+ * can be previewed; the book file itself is kept as a File and uploaded by the
+ * API layer.
  */
 function AddBookForm({ onAdd }) {
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [coverImage, setCoverImage] = useState("");
+  const [bookFile, setBookFile] = useState(null);
   const fileInputRef = useRef(null);
+  const bookFileInputRef = useRef(null);
 
   function handleFileChange(event) {
     const file = event.target.files?.[0];
@@ -22,6 +25,10 @@ function AddBookForm({ onAdd }) {
     const reader = new FileReader();
     reader.onload = () => setCoverImage(String(reader.result));
     reader.readAsDataURL(file);
+  }
+
+  function handleBookFileChange(event) {
+    setBookFile(event.target.files?.[0] ?? null);
   }
 
   function handleSubmit(event) {
@@ -37,13 +44,17 @@ function AddBookForm({ onAdd }) {
       title: trimmedTitle,
       authors: trimmedAuthor ? [{ name: trimmedAuthor }] : [],
       cover_image: coverImage,
+      file: bookFile,
+      file_name: bookFile?.name ?? "",
       download_count: 0,
     });
 
     setTitle("");
     setAuthor("");
     setCoverImage("");
+    setBookFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (bookFileInputRef.current) bookFileInputRef.current.value = "";
   }
 
   return (
@@ -84,6 +95,23 @@ function AddBookForm({ onAdd }) {
             alt="Cover preview"
             className="h-16 w-12 rounded object-cover ring-1 ring-gray-200"
           />
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input
+          ref={bookFileInputRef}
+          type="file"
+          accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.zip,application/epub+zip,application/pdf,text/plain"
+          onChange={handleBookFileChange}
+          aria-label="Book file"
+          className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-600"
+        />
+
+        {bookFile && (
+          <span className="truncate text-sm text-gray-500" title={bookFile.name}>
+            {bookFile.name}
+          </span>
         )}
 
         <button

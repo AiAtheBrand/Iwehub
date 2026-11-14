@@ -1,9 +1,11 @@
 import { Link, useParams } from "react-router-dom";
 import { useBook } from "../hooks/useBook";
+import { getDownloadOptions } from "../lib/formats";
 
 function BookDetails() {
   const { id } = useParams();
   const { book, loading, error } = useBook(id);
+  const downloads = book ? getDownloadOptions(book) : [];
 
   return (
     <div className="min-h-screen bg-gray-100 p-10">
@@ -65,6 +67,27 @@ function BookDetails() {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {downloads.length > 0 && (
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Download
+                </h2>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {downloads.map((format) => (
+                    <a
+                      key={format.label}
+                      href={format.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                      {format.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </article>

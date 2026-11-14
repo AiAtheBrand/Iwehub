@@ -54,4 +54,45 @@ describe("BookDetails", () => {
       /could not load this book/i,
     );
   });
+
+  it("shows a download link for each available format", async () => {
+    api.getBook.mockResolvedValue({
+      id: 1342,
+      title: "Pride and Prejudice",
+      authors: [{ name: "Austen, Jane" }],
+      formats: {
+        "application/epub+zip": "https://example.com/1342.epub",
+        "text/plain; charset=utf-8": "https://example.com/1342.txt",
+      },
+    });
+
+    renderDetails(1342);
+
+    await screen.findByRole("heading", { name: "Pride and Prejudice" });
+
+    expect(screen.getByRole("link", { name: "EPUB" })).toHaveAttribute(
+      "href",
+      "https://example.com/1342.epub",
+    );
+    expect(screen.getByRole("link", { name: "Plain text" })).toHaveAttribute(
+      "href",
+      "https://example.com/1342.txt",
+    );
+  });
+
+  it("shows no download section when the book has no formats", async () => {
+    api.getBook.mockResolvedValue({
+      id: 1342,
+      title: "Pride and Prejudice",
+      authors: [{ name: "Austen, Jane" }],
+    });
+
+    renderDetails(1342);
+
+    await screen.findByRole("heading", { name: "Pride and Prejudice" });
+
+    expect(
+      screen.queryByRole("heading", { name: "Download" }),
+    ).not.toBeInTheDocument();
+  });
 });

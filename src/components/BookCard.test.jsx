@@ -88,4 +88,55 @@ describe("BookCard", () => {
       screen.queryByRole("button", { name: /delete/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("links to the preferred download format", () => {
+    renderCard({
+      ...baseBook,
+      formats: {
+        "application/epub+zip": "https://example.com/1342.epub",
+        "text/plain; charset=utf-8": "https://example.com/1342.txt",
+      },
+    });
+
+    const link = screen.getByRole("link", {
+      name: /download pride and prejudice/i,
+    });
+
+    expect(link).toHaveAttribute("href", "https://example.com/1342.epub");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("hides the download link when no formats are available", () => {
+    renderCard(baseBook);
+
+    expect(
+      screen.queryByRole("link", { name: /download/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("links to the uploaded file for a shared-library book", () => {
+    renderCard({
+      ...baseBook,
+      source: "library",
+      fileUrl: "https://example.com/storage/book-files/abc.epub",
+      fileName: "Pride.epub",
+    });
+
+    const link = screen.getByRole("link", {
+      name: /download pride and prejudice/i,
+    });
+
+    expect(link).toHaveAttribute(
+      "href",
+      "https://example.com/storage/book-files/abc.epub?download=Pride.epub",
+    );
+  });
+
+  it("hides the View button for shared-library books", () => {
+    renderCard({ ...baseBook, source: "library" });
+
+    expect(
+      screen.queryByRole("button", { name: /view/i }),
+    ).not.toBeInTheDocument();
+  });
 });

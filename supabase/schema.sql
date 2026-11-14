@@ -10,14 +10,22 @@ create table if not exists public.books (
   title text not null,
   author text,
   cover_url text,
+  file_url text,
+  file_name text,
   created_by uuid default auth.uid() references auth.users (id) on delete cascade,
   created_at timestamptz not null default now()
 );
 
--- Upgrade an older table created before auth existed.
+-- Upgrade an older table created before auth / file uploads existed.
 alter table public.books
   add column if not exists created_by uuid default auth.uid()
     references auth.users (id) on delete cascade;
+
+alter table public.books
+  add column if not exists file_url text;
+
+alter table public.books
+  add column if not exists file_name text;
 
 alter table public.books enable row level security;
 
@@ -61,3 +69,21 @@ create policy "Authenticated users can upload covers"
   on storage.objects for insert
   to authenticated
   with check (bucket_id = 'covers');
+
+-- ---------------------------------------------------------------------------
+-- Storage bucket for the uploaded book files themselves.
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('book-files', 'book-files', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Book files are publicly readable" on storage.objects;
+create policy "Book files are publicly readable"
+  on storage.objects for select
+  using (bucket_id = 'book-files');
+
+drop policy if exists "Authenticated users can upload book files" on storage.objects;
+create policy "Authenticated users can upload book files"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'book-files');
