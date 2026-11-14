@@ -46,7 +46,7 @@ function App() {
     <div className="min-h-screen bg-gray-100 p-10">
       <h1 className="text-4xl font-bold text-blue-600">Gutenberg Books</h1>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="mt-6 flex flex-col items-start gap-3">
         <input
           type="search"
           value={search}
