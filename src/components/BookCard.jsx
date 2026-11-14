@@ -1,6 +1,7 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-function BookCard({ book }) {
+function BookCard({ book, onDelete }) {
+  const navigate = useNavigate();
   const author = book.authors?.[0]?.name ?? "Unknown author";
   const downloads = book.download_count ?? 0;
 
@@ -10,7 +11,6 @@ function BookCard({ book }) {
         <img
           src={book.cover_image}
           alt={book.title}
-          loading="lazy"
           className="h-80 w-full object-cover transition duration-500 group-hover:scale-105"
         />
       </div>
@@ -22,17 +22,31 @@ function BookCard({ book }) {
 
         <p className="mt-2 text-sm text-gray-500">{author}</p>
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex items-center justify-between gap-2">
           <span className="text-sm text-gray-400">
-            {downloads.toLocaleString()} downloads
+            {downloads.toLocaleString()} reads
           </span>
 
-          <Link
-            to={`/books/${book.id}`}
-            className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
-          >
-            View
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/books/${book.id}`)}
+              className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
+            >
+              View
+            </button>
+
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(book.id)}
+                aria-label={`Delete ${book.title}`}
+                className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </article>
