@@ -83,7 +83,7 @@ describe("App", () => {
     expect(screen.getByText(/number of books: 1/i)).toBeInTheDocument();
   });
 
-  it("adds a book through the form", async () => {
+  it("reveals the add form only after clicking Add book", async () => {
     const user = userEvent.setup();
     api.getBooks.mockResolvedValue([]);
 
@@ -91,13 +91,32 @@ describe("App", () => {
 
     await screen.findByText(/no books found/i);
 
+    expect(screen.queryByLabelText("Book title")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^add book$/i }));
+
+    expect(screen.getByLabelText("Book title")).toBeInTheDocument();
+    expect(screen.getByLabelText("Author")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cover image")).toBeInTheDocument();
+  });
+
+  it("adds a book through the form and hides the form again", async () => {
+    const user = userEvent.setup();
+    api.getBooks.mockResolvedValue([]);
+
+    renderApp();
+
+    await screen.findByText(/no books found/i);
+
+    await user.click(screen.getByRole("button", { name: /^add book$/i }));
     await user.type(screen.getByLabelText("Book title"), "My New Book");
-    await user.click(screen.getByRole("button", { name: /add book/i }));
+    await user.click(screen.getByRole("button", { name: /^add book$/i }));
 
     expect(
       screen.getByRole("heading", { name: "My New Book" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/number of books: 1/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Book title")).not.toBeInTheDocument();
   });
 
   it("deletes a book from the grid", async () => {
@@ -116,5 +135,47 @@ describe("App", () => {
       screen.queryByRole("heading", { name: "Book One" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/no books found/i)).toBeInTheDocument();
+  });
+
+  it("persists added books across remounts", async () => {
+    const user = userEvent.setup();
+    api.getBooks.mockResolvedValue([]);
+
+    const { unmount } = renderApp();
+    await screen.findByText(/no books found/i);
+
+    await user.click(screen.getByRole("button", { name: /^add book$/i }));
+    await user.type(screen.getByLabelText("Book title"), "Persisted Book");
+    await user.click(screen.getByRole("button", { name: /^add book$/i }));
+
+    expect(
+      screen.getByRole("heading", { name: "Persisted Book" }),
+    ).toBeInTheDocument();
+
+    unmount();
+
+    api.getBooks.mockResolvedValue([]);
+    renderApp();
+
+    expect(
+      await screen.findByRole("heading", { name: "Persisted Book" }),
+    ).toBeInTheDocument();
+  });
+
+  it("persists deletions across remounts", async () => {
+    const user = userEvent.setup();
+    api.getBooks.mockResolvedValue([makeBook()]);
+
+    const { unmount } = renderApp();
+    await screen.findByRole("heading", { name: "Book One" });
+
+    await user.click(screen.getByRole("button", { name: /delete book one/i }));
+
+    unmount();
+
+    api.getBooks.mockResolvedValue([makeBook()]);
+    renderApp();
+
+    expect(await screen.findByText(/no books found/i)).toBeInTheDocument();
   });
 });

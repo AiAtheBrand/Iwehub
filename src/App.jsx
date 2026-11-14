@@ -2,12 +2,20 @@ import { useMemo, useState } from "react";
 import BookCard from "./components/BookCard";
 import AddBookForm from "./components/AddBookForm";
 import { useBooks } from "./hooks/useBooks";
+import { useLocalStorage } from "./hooks/useLocalStorage";
 
 function App() {
   const { books: fetchedBooks, loading, error } = useBooks();
-  const [addedBooks, setAddedBooks] = useState([]);
-  const [deletedIds, setDeletedIds] = useState([]);
+  const [addedBooks, setAddedBooks] = useLocalStorage(
+    "gutenberg:addedBooks",
+    [],
+  );
+  const [deletedIds, setDeletedIds] = useLocalStorage(
+    "gutenberg:deletedIds",
+    [],
+  );
   const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   // Combine the fetched catalog with locally added books, drop deleted ones,
   // and apply the search term (title or first author).
@@ -26,6 +34,7 @@ function App() {
 
   function handleAdd(book) {
     setAddedBooks((prev) => [book, ...prev]);
+    setShowForm(false);
   }
 
   function handleDelete(id) {
@@ -37,16 +46,27 @@ function App() {
     <div className="min-h-screen bg-gray-100 p-10">
       <h1 className="text-4xl font-bold text-blue-600">Gutenberg Books</h1>
 
-      <input
-        type="search"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search by title or author"
-        aria-label="Search books"
-        className="mt-6 w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
-      />
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by title or author"
+          aria-label="Search books"
+          className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
+        />
 
-      <AddBookForm onAdd={handleAdd} />
+        <button
+          type="button"
+          onClick={() => setShowForm((visible) => !visible)}
+          aria-expanded={showForm}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          {showForm ? "Cancel" : "Add book"}
+        </button>
+      </div>
+
+      {showForm && <AddBookForm onAdd={handleAdd} />}
 
       {loading && (
         <p className="mt-4 text-gray-600" role="status">
