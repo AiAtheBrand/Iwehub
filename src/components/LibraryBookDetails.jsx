@@ -1,16 +1,15 @@
 import { Link, useParams } from "react-router-dom";
 import { useLibraryBook } from "../hooks/useLibraryBook";
-import { getPreferredDownload } from "../lib/formats";
+import { getDownload } from "../lib/download";
 
 /**
  * Detail page for a book from the shared library (one users added).
- * Unlike the Gutenberg catalogue, a library book has a single uploaded file,
- * so it shows one Download button instead of a list of formats.
+ * A library book has a single uploaded file, so it shows one Download button.
  */
 function LibraryBookDetails() {
   const { id } = useParams();
   const { book, loading, error } = useLibraryBook(id);
-  const download = book ? getPreferredDownload(book) : null;
+  const download = book ? getDownload(book) : null;
 
   return (
     <div className="min-h-screen bg-gray-100 p-10">

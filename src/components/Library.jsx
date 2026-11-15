@@ -1,63 +1,36 @@
 import { useMemo, useState } from "react";
 import BookCard from "./BookCard";
 import AddBookForm from "./AddBookForm";
-import { useBooks } from "../hooks/useBooks";
 import { useLibraryBooks } from "../hooks/useLibraryBooks";
-import { useLocalStorage } from "../hooks/useLocalStorage";
 
 /**
- * The signed-in experience: the Gutenberg catalogue merged with the shared
- * library, plus search, add and delete. Mounted only for authenticated users so
- * the catalogue proxy and the library query are not called on the sign-in
- * screen.
+ * The signed-in experience: the shared library of uploaded books, plus search,
+ * add and delete. Mounted only for authenticated users.
  */
 function Library({ user, onSignOut }) {
   const {
-    books: catalogBooks,
-    loading: catalogLoading,
-    error: catalogError,
-  } = useBooks();
-  const {
     books: libraryBooks,
-    loading: libraryLoading,
-    error: libraryError,
+    loading,
+    error,
     addBook,
     removeBook,
   } = useLibraryBooks();
 
-  // Only Gutenberg-catalogue deletions are stored locally; shared library
-  // books are deleted from the database for everyone.
-  const [deletedIds, setDeletedIds] = useLocalStorage(
-    "gutenberg:deletedIds",
-    [],
-  );
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [actionError, setActionError] = useState(null);
 
-  const loading = catalogLoading || libraryLoading;
-  const error = catalogError || libraryError;
-
-  // Merge the shared library with the Gutenberg catalogue, hide deleted
-  // catalogue books, and apply the search term (title or first author).
+  // Apply the search term to the title or the first author.
   const books = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const catalog = catalogBooks.map((book) => ({
-      ...book,
-      source: "gutenberg",
-    }));
+    if (!term) return libraryBooks;
 
-    return [...libraryBooks, ...catalog].filter((book) => {
-      if (book.source === "gutenberg" && deletedIds.includes(book.id)) {
-        return false;
-      }
-      if (!term) return true;
-
+    return libraryBooks.filter((book) => {
       const title = book.title?.toLowerCase() ?? "";
       const author = book.authors?.[0]?.name?.toLowerCase() ?? "";
       return title.includes(term) || author.includes(term);
     });
-  }, [libraryBooks, catalogBooks, deletedIds, search]);
+  }, [libraryBooks, search]);
 
   async function handleAdd(draft) {
     setActionError(null);
@@ -72,13 +45,7 @@ function Library({ user, onSignOut }) {
   async function handleDelete(book) {
     setActionError(null);
     try {
-      if (book.source === "library") {
-        await removeBook(book.id);
-      } else {
-        setDeletedIds((prev) =>
-          prev.includes(book.id) ? prev : [...prev, book.id],
-        );
-      }
+      await removeBook(book.id);
     } catch (err) {
       setActionError(err);
     }
@@ -93,10 +60,9 @@ function Library({ user, onSignOut }) {
     }
   }
 
-  // A book can be deleted when the user owns the library row, or when it is a
-  // local catalogue entry (hidden just for them).
+  // A book can only be deleted by the user who added it. This mirrors the
+  // Row Level Security policy on the server, which is what actually enforces it.
   function canDelete(book) {
-    if (book.source === "gutenberg") return true;
     return book.ownerId === user?.id;
   }
 

@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { getPreferredDownload } from "../lib/formats";
+import { getDownload } from "../lib/download";
 
 function BookCard({ book, onDelete }) {
   const navigate = useNavigate();
   const author = book.authors?.[0]?.name ?? "Unknown author";
   const downloads = book.download_count ?? 0;
-  const download = getPreferredDownload(book);
+  const download = getDownload(book);
 
   return (
     <article className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 transition duration-300 hover:-translate-y-1 hover:shadow-xl">
@@ -38,13 +38,7 @@ function BookCard({ book, onDelete }) {
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
-              onClick={() =>
-                navigate(
-                  book.source === "library"
-                    ? `/library/${book.id}`
-                    : `/books/${book.id}`,
-                )
-              }
+              onClick={() => navigate(`/library/${book.id}`)}
               className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
             >
               View

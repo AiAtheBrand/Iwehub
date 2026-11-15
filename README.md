@@ -1,55 +1,48 @@
 # Gutenberg Books
 
-A React single-page app that browses public-domain books from the
-[Project Gutenberg Free Books API](https://rapidapi.com/) and lets **signed-in
-users** add their own books to a **shared library** backed by Supabase
-(Postgres + Auth).
+A React single-page app for a **shared book library**. **Signed-in users** add
+books (title, author, description, subjects, a cover image and the book file
+itself) and everyone signed in can browse and download them. It is backed by
+Supabase (Postgres + Auth + Storage).
 
-The browser never talks to RapidAPI directly: a small Express server holds the
-API key and proxies those requests. Supabase is accessed directly from the
-browser using its **public anon key**, which is safe to expose because Row Level
-Security (RLS) enforces access on the server. Authentication uses **Supabase
-Auth** with email + password.
+Supabase is accessed directly from the browser using its **public anon key**,
+which is safe to expose because Row Level Security (RLS) enforces access on the
+server. Authentication uses **Supabase Auth** with email + password.
+
+> This app used to also browse the public Project Gutenberg catalogue through a
+> RapidAPI proxy. That has been removed: the app is now purely the shared
+> library of uploaded books.
 
 ## Tech stack
 
 - **React 19** + **Vite 8**
 - **react-router-dom 7** (routing)
 - **Tailwind CSS 4** (styling)
-- **Express 5** (RapidAPI proxy / static server)
 - **Supabase** (Postgres database + Auth + storage + auto REST API)
+- **Express 5** (serves the production build)
 - **Vitest** + **Testing Library** + **jsdom** (tests)
 
 ## Architecture
 
 ```
-                    ┌───────────────┐
-   catalog ────────▶│ Express proxy │──────▶ RapidAPI (Project Gutenberg)
-                    └───────────────┘
-Browser ──▶ React
-   │                ┌───────────────┐
-   └── shared ─────▶│   Supabase    │  (Postgres table `books` + storage `covers`)
-      library       └───────────────┘
+                     ┌───────────────┐
+Browser ──▶ React ──▶│   Supabase    │  (table `books` + buckets `covers`, `book-files`)
+                     └───────────────┘
 ```
 
-- The **Gutenberg catalogue** is read-only and fetched through the Express proxy.
-  Each book has a **View** page (`/books/:id`) with its description, subjects and
-  per-format downloads.
-- The **shared library** (books users add) lives in Supabase and is visible to
-  everyone. A book captures a title, author, description, subjects, cover image
-  **and the book file itself**, all uploaded to Supabase Storage, so shared
-  books can be downloaded by anyone. Library books have their own **View** page
-  (`/library/:id`) with a single Download button.
-- Adding a book requires **signing in**. Deleting a **library** book is allowed
-  only for the user who added it; deleting a **catalogue** book only hides it
-  locally (stored in `localStorage`).
+- The **shared library** lives in Supabase and is visible to everyone. A book
+  captures a title, author, description, subjects, cover image **and the book
+  file itself**, all uploaded to Supabase Storage, so shared books can be
+  downloaded by anyone. Each book has a **View** page (`/library/:id`) with a
+  single Download button.
+- Adding a book requires **signing in**. Deleting a book is allowed only for the
+  user who added it.
 - **Every page is gated behind sign-in.** All routes are children of an
   `AuthGate` layout route ([`src/components/AuthGate.jsx`](src/components/AuthGate.jsx)),
-  so `/`, `/books/:id` and `/library/:id` all show the sign-in screen until a
-  session exists. (When Supabase is not configured the wall is skipped so the
-  app still runs.)
-- Deleting a library book also deletes its uploaded cover and book file, so no
-  orphaned files are left behind in Storage.
+  so `/` and `/library/:id` both show the sign-in screen until a session exists.
+  (When Supabase is not configured the wall is skipped so the app still runs.)
+- Deleting a book also deletes its uploaded cover and book file, so no orphaned
+  files are left behind in Storage.
 - Uploads are limited to **20 MB per file** (see
   [`src/lib/limits.js`](src/lib/limits.js)); the form rejects larger files
   immediately and the API layer enforces the same limit again.
@@ -88,12 +81,10 @@ Browser ──▶ React
       VITE_SUPABASE_ANON_KEY=your-anon-key
       ```
 
-4. Fill in your RapidAPI credentials in `.env` (see `.env.example`).
-
-5. Run the API server **and** the Vite dev server together:
+4. Start the dev server:
 
    ```bash
-   npm run dev:all
+   npm run dev
    ```
 
    Open the URL Vite prints (usually http://localhost:5173).
@@ -102,11 +93,10 @@ Browser ──▶ React
 
 | Script | Description |
 | --- | --- |
-| `npm run dev:all` | Run the API server and Vite dev server together |
-| `npm run server` | Run only the API proxy server |
-| `npm run dev` | Run only the Vite dev server |
+| `npm run dev` | Run the Vite dev server |
 | `npm run build` | Production build into `dist/` |
-| `npm start` | Serve `dist/` + `/api` from Express (production) |
+| `npm start` | Serve `dist/` with Express (production) |
+| `npm run preview` | Preview the built `dist/` with Vite |
 | `npm run lint` | Run ESLint |
 | `npm run test` | Run tests in watch mode |
 | `npm run test:run` | Run tests once (CI) |
@@ -115,23 +105,25 @@ Browser ──▶ React
 ## Project structure
 
 ```
-server/index.js          # Express proxy + static server
-supabase/schema.sql      # Database schema, policies, storage bucket
+server/index.js          # Static server for the production build
+supabase/schema.sql      # Database schema, policies, storage buckets
 src/
-├── lib/supabase.js      # Supabase client (guarded by env vars)
-├── api/
-│   ├── books.js         # Gutenberg catalogue client (via /api proxy)
-│   └── library.js       # Supabase library client (list/add/delete)
+├── lib/
+│   ├── supabase.js      # Supabase client (guarded by env vars)
+│   ├── limits.js        # Upload size limit (20 MB)
+│   └── download.js      # Builds the download link for an uploaded file
+├── api/library.js       # Supabase library client (list/get/add/delete)
 ├── hooks/
 │   ├── useAuth.js       # Supabase session + sign in/up/out
-│   ├── useBooks.js      # Loads the catalogue
 │   ├── useLibraryBooks.js # Loads + mutates the shared library
-│   └── useLocalStorage.js # Persists local state (catalogue deletions)
+│   └── useLibraryBook.js  # Loads a single library book
 ├── components/
+│   ├── AuthGate.jsx     # Layout route: gates every page behind sign-in
 │   ├── AuthForm.jsx     # Email + password sign in / sign up
-│   ├── BookCard.jsx
-│   ├── BookDetails.jsx
-│   └── AddBookForm.jsx
+│   ├── Library.jsx      # The signed-in grid: search, add, delete
+│   ├── BookCard.jsx     # One book in the grid
+│   ├── AddBookForm.jsx  # Add a book (details + cover + book file)
+│   └── LibraryBookDetails.jsx # The /library/:id View page
 ├── router/router.jsx
 ├── App.jsx
 └── main.jsx
@@ -160,12 +152,11 @@ automatically when an authenticated user inserts a row.
 
 ## Security notes
 
-- The **RapidAPI key** is server-side only (`.env`, no `VITE_` prefix) and is
-  never sent to the browser.
 - The **Supabase anon key** is intentionally public; the RLS policies above are
   what actually protect the data.
 - Auth **enforces** who can write and delete; anonymous visitors can only read.
-- Rotate the RapidAPI key if it was ever committed.
+- There are no server-side secrets any more — the old RapidAPI proxy and key
+  were removed, so no API key is shipped or stored.
 
 ## Continuous integration
 

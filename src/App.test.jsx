@@ -4,13 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import App from "./App";
 import AuthGate from "./components/AuthGate";
-import BookDetails from "./components/BookDetails";
 import LibraryBookDetails from "./components/LibraryBookDetails";
-import * as api from "./api/books";
 import * as library from "./api/library";
 import { useAuth } from "./hooks/useAuth";
 
-vi.mock("./api/books");
 vi.mock("./api/library");
 vi.mock("./hooks/useAuth");
 
@@ -29,17 +26,6 @@ function authState(overrides = {}) {
   };
 }
 
-function makeBook(overrides) {
-  return {
-    id: 1,
-    title: "Book One",
-    authors: [{ name: "Author One" }],
-    download_count: 5,
-    cover_image: "",
-    ...overrides,
-  };
-}
-
 function makeLibraryBook(overrides) {
   return {
     id: "lib-1",
@@ -47,7 +33,6 @@ function makeLibraryBook(overrides) {
     authors: [{ name: "Someone" }],
     cover_image: "",
     download_count: 0,
-    source: "library",
     ownerId: USER.id,
     ...overrides,
   };
@@ -59,7 +44,6 @@ function renderApp(initialEntries = ["/"]) {
       <Routes>
         <Route element={<AuthGate />}>
           <Route path="/" element={<App />} />
-          <Route path="/books/:id" element={<BookDetails />} />
           <Route path="/library/:id" element={<LibraryBookDetails />} />
         </Route>
       </Routes>
@@ -69,8 +53,6 @@ function renderApp(initialEntries = ["/"]) {
 
 describe("App", () => {
   beforeEach(() => {
-    api.getBooks.mockReset();
-    api.getBook.mockReset();
     library.listLibraryBooks.mockReset().mockResolvedValue([]);
     library.getLibraryBook.mockReset();
     library.addLibraryBook.mockReset();
@@ -79,19 +61,19 @@ describe("App", () => {
   });
 
   it("shows a loading state, then renders the fetched books", async () => {
-    api.getBooks.mockResolvedValue([makeBook()]);
+    library.listLibraryBooks.mockResolvedValue([makeLibraryBook()]);
 
     renderApp();
 
     expect(screen.getByRole("status")).toHaveTextContent(/loading/i);
     expect(
-      await screen.findByRole("heading", { name: "Book One" }),
+      await screen.findByRole("heading", { name: "Shared Book" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/number of books: 1/i)).toBeInTheDocument();
   });
 
   it("shows an error message when the request fails", async () => {
-    api.getBooks.mockRejectedValue(new Error("boom"));
+    library.listLibraryBooks.mockRejectedValue(new Error("boom"));
 
     renderApp();
 
@@ -101,8 +83,6 @@ describe("App", () => {
   });
 
   it("shows an empty state when no books are returned", async () => {
-    api.getBooks.mockResolvedValue([]);
-
     renderApp();
 
     expect(await screen.findByText(/no books found/i)).toBeInTheDocument();
@@ -110,9 +90,17 @@ describe("App", () => {
 
   it("filters books by the search term", async () => {
     const user = userEvent.setup();
-    api.getBooks.mockResolvedValue([
-      makeBook({ id: 1, title: "Pride and Prejudice", authors: [{ name: "Austen, Jane" }] }),
-      makeBook({ id: 2, title: "Frankenstein", authors: [{ name: "Shelley, Mary" }] }),
+    library.listLibraryBooks.mockResolvedValue([
+      makeLibraryBook({
+        id: "lib-1",
+        title: "Pride and Prejudice",
+        authors: [{ name: "Austen, Jane" }],
+      }),
+      makeLibraryBook({
+        id: "lib-2",
+        title: "Frankenstein",
+        authors: [{ name: "Shelley, Mary" }],
+      }),
     ]);
 
     renderApp();
@@ -131,13 +119,13 @@ describe("App", () => {
   });
 
   it("shows the signed-in user and the add button when authenticated", async () => {
-    api.getBooks.mockResolvedValue([]);
-
     renderApp();
 
     await screen.findByText(/no books found/i);
 
-    expect(screen.getByText(/signed in as reader@example.com/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/signed in as reader@example.com/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /^add book$/i }),
     ).toBeInTheDocument();
@@ -145,7 +133,6 @@ describe("App", () => {
 
   it("hides the add button and form when signed out", async () => {
     useAuth.mockReturnValue(authState({ user: null }));
-    api.getBooks.mockResolvedValue([]);
 
     renderApp();
 
@@ -159,7 +146,7 @@ describe("App", () => {
 
   it("shows the auth form and hides the library when signed out", async () => {
     useAuth.mockReturnValue(authState({ user: null }));
-    api.getBooks.mockResolvedValue([makeBook()]);
+    library.listLibraryBooks.mockResolvedValue([makeLibraryBook()]);
 
     renderApp();
 
@@ -174,29 +161,17 @@ describe("App", () => {
       screen.queryByRole("searchbox", { name: "Search books" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "Book One" }),
+      screen.queryByRole("heading", { name: "Shared Book" }),
     ).not.toBeInTheDocument();
   });
 
   it("shows a loading state while the session is being checked", () => {
     useAuth.mockReturnValue(authState({ user: null, loading: true }));
-    api.getBooks.mockResolvedValue([]);
 
     renderApp();
 
     expect(screen.getByRole("status")).toHaveTextContent(/loading/i);
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
-  });
-
-  it("gates the catalogue detail route behind sign-in", async () => {
-    useAuth.mockReturnValue(authState({ user: null }));
-
-    renderApp(["/books/1342"]);
-
-    expect(
-      await screen.findByRole("heading", { name: /sign in/i }),
-    ).toBeInTheDocument();
-    expect(api.getBook).not.toHaveBeenCalled();
   });
 
   it("gates the library detail route behind sign-in", async () => {
@@ -210,20 +185,21 @@ describe("App", () => {
     expect(library.getLibraryBook).not.toHaveBeenCalled();
   });
 
-  it("renders a detail route for a signed-in user", async () => {
-    api.getBook.mockResolvedValue(makeBook({ title: "Book One" }));
+  it("renders the library detail route for a signed-in user", async () => {
+    library.getLibraryBook.mockResolvedValue(
+      makeLibraryBook({ title: "Detailed Book" }),
+    );
 
-    renderApp(["/books/1"]);
+    renderApp(["/library/lib-1"]);
 
     expect(
-      await screen.findByRole("heading", { name: "Book One" }),
+      await screen.findByRole("heading", { name: "Detailed Book" }),
     ).toBeInTheDocument();
-    expect(api.getBook).toHaveBeenCalledWith("1");
+    expect(library.getLibraryBook).toHaveBeenCalledWith("lib-1");
   });
 
   it("reveals the add form only after clicking Add book", async () => {
     const user = userEvent.setup();
-    api.getBooks.mockResolvedValue([]);
 
     renderApp();
 
@@ -243,7 +219,6 @@ describe("App", () => {
 
   it("adds a book to the shared library and hides the form", async () => {
     const user = userEvent.setup();
-    api.getBooks.mockResolvedValue([]);
     library.addLibraryBook.mockResolvedValue(
       makeLibraryBook({ id: "lib-new", title: "My New Book" }),
     );
@@ -265,7 +240,6 @@ describe("App", () => {
 
   it("deletes a shared library book the user owns", async () => {
     const user = userEvent.setup();
-    api.getBooks.mockResolvedValue([]);
     library.listLibraryBooks.mockResolvedValue([makeLibraryBook()]);
 
     renderApp();
@@ -283,7 +257,6 @@ describe("App", () => {
   });
 
   it("hides the delete button on books owned by someone else", async () => {
-    api.getBooks.mockResolvedValue([]);
     library.listLibraryBooks.mockResolvedValue([
       makeLibraryBook({ ownerId: "someone-else" }),
     ]);
@@ -295,41 +268,5 @@ describe("App", () => {
     expect(
       screen.queryByRole("button", { name: /delete shared book/i }),
     ).not.toBeInTheDocument();
-  });
-
-  it("deletes a Gutenberg book locally", async () => {
-    const user = userEvent.setup();
-    api.getBooks.mockResolvedValue([makeBook()]);
-
-    renderApp();
-
-    await screen.findByRole("heading", { name: "Book One" });
-
-    await user.click(
-      screen.getByRole("button", { name: /delete book one/i }),
-    );
-
-    expect(library.deleteLibraryBook).not.toHaveBeenCalled();
-    expect(
-      screen.queryByRole("heading", { name: "Book One" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText(/no books found/i)).toBeInTheDocument();
-  });
-
-  it("persists Gutenberg deletions across remounts", async () => {
-    const user = userEvent.setup();
-    api.getBooks.mockResolvedValue([makeBook()]);
-
-    const { unmount } = renderApp();
-    await screen.findByRole("heading", { name: "Book One" });
-
-    await user.click(screen.getByRole("button", { name: /delete book one/i }));
-
-    unmount();
-
-    api.getBooks.mockResolvedValue([makeBook()]);
-    renderApp();
-
-    expect(await screen.findByText(/no books found/i)).toBeInTheDocument();
   });
 });

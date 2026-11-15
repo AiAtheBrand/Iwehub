@@ -37,6 +37,21 @@ describe("AddBookForm", () => {
     expect(screen.getByLabelText("Author")).toHaveValue("");
   });
 
+  it("labels each file picker so it is clear what it is for", () => {
+    render(<AddBookForm onAdd={vi.fn()} />);
+
+    const cover = screen.getByLabelText("Cover image");
+    const bookFile = screen.getByLabelText("Book file");
+
+    expect(cover).toHaveAttribute("type", "file");
+    expect(cover).toHaveAttribute("accept", "image/*");
+    expect(bookFile).toHaveAttribute("type", "file");
+
+    // The labels are visible text, not just accessible names.
+    expect(screen.getByText("Cover image")).toBeInTheDocument();
+    expect(screen.getByText("Book file")).toBeInTheDocument();
+  });
+
   it("does not call onAdd when the title is empty", async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();

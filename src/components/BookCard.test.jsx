@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import BookCard from "./BookCard";
 
 const baseBook = {
-  id: 1342,
+  id: "lib-1",
   title: "Pride and Prejudice",
   authors: [{ name: "Austen, Jane" }],
   cover_image: "cover.jpg",
@@ -51,7 +51,7 @@ describe("BookCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("navigates to the detail route when View is clicked", () => {
+  it("navigates to the library detail route when View is clicked", () => {
     function Location() {
       return <div data-testid="location">{useLocation().pathname}</div>;
     }
@@ -60,17 +60,17 @@ describe("BookCard", () => {
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<BookCard book={baseBook} />} />
-          <Route path="/books/:id" element={<Location />} />
+          <Route path="/library/:id" element={<Location />} />
         </Routes>
       </MemoryRouter>,
     );
 
     fireEvent.click(screen.getByRole("button", { name: /view/i }));
 
-    expect(screen.getByTestId("location")).toHaveTextContent("/books/1342");
+    expect(screen.getByTestId("location")).toHaveTextContent("/library/lib-1");
   });
 
-  it("calls onDelete with the book id", () => {
+  it("calls onDelete with the book", () => {
     const onDelete = vi.fn();
     renderCard(baseBook, onDelete);
 
@@ -89,35 +89,9 @@ describe("BookCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("links to the preferred download format", () => {
+  it("links to the uploaded file", () => {
     renderCard({
       ...baseBook,
-      formats: {
-        "application/epub+zip": "https://example.com/1342.epub",
-        "text/plain; charset=utf-8": "https://example.com/1342.txt",
-      },
-    });
-
-    const link = screen.getByRole("link", {
-      name: /download pride and prejudice/i,
-    });
-
-    expect(link).toHaveAttribute("href", "https://example.com/1342.epub");
-    expect(link).toHaveAttribute("target", "_blank");
-  });
-
-  it("hides the download link when no formats are available", () => {
-    renderCard(baseBook);
-
-    expect(
-      screen.queryByRole("link", { name: /download/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("links to the uploaded file for a shared-library book", () => {
-    renderCard({
-      ...baseBook,
-      source: "library",
       fileUrl: "https://example.com/storage/book-files/abc.epub",
       fileName: "Pride.epub",
     });
@@ -130,27 +104,14 @@ describe("BookCard", () => {
       "href",
       "https://example.com/storage/book-files/abc.epub?download=Pride.epub",
     );
+    expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("navigates to the library detail route for a shared-library book", () => {
-    function Location() {
-      return <div data-testid="location">{useLocation().pathname}</div>;
-    }
+  it("hides the download link when the book has no uploaded file", () => {
+    renderCard(baseBook);
 
-    render(
-      <MemoryRouter initialEntries={["/"]}>
-        <Routes>
-          <Route
-            path="/"
-            element={<BookCard book={{ ...baseBook, source: "library" }} />}
-          />
-          <Route path="/library/:id" element={<Location />} />
-        </Routes>
-      </MemoryRouter>,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /view/i }));
-
-    expect(screen.getByTestId("location")).toHaveTextContent("/library/1342");
+    expect(
+      screen.queryByRole("link", { name: /download/i }),
+    ).not.toBeInTheDocument();
   });
 });

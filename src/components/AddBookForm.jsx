@@ -131,15 +131,26 @@ function AddBookForm({ onAdd }) {
         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          aria-label="Cover image"
-          className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-600"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="cover-image"
+            className="text-sm font-medium text-gray-700"
+          >
+            Cover image
+          </label>
+          <input
+            id="cover-image"
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-600"
+          />
+          <span className="text-xs text-gray-500">
+            The book&rsquo;s front cover (image file, up to {MAX_UPLOAD_LABEL})
+          </span>
+        </div>
 
         {coverImage && (
           <img
@@ -156,15 +167,27 @@ function AddBookForm({ onAdd }) {
         </p>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          ref={bookFileInputRef}
-          type="file"
-          accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.zip,application/epub+zip,application/pdf,text/plain"
-          onChange={handleBookFileChange}
-          aria-label="Book file"
-          className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-600"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="book-file"
+            className="text-sm font-medium text-gray-700"
+          >
+            Book file
+          </label>
+          <input
+            id="book-file"
+            ref={bookFileInputRef}
+            type="file"
+            accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.zip,application/epub+zip,application/pdf,text/plain"
+            onChange={handleBookFileChange}
+            className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-600"
+          />
+          <span className="text-xs text-gray-500">
+            The actual book to download (EPUB, PDF, MOBI, AZW3, FB2, TXT or ZIP,
+            up to {MAX_UPLOAD_LABEL})
+          </span>
+        </div>
 
         {bookFile && (
           <span className="truncate text-sm text-gray-500" title={bookFile.name}>

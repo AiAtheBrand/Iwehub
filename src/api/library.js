@@ -16,7 +16,6 @@ function toBook(row) {
     authors: row.author ? [{ name: row.author }] : [],
     cover_image: row.cover_url ?? "",
     download_count: 0,
-    source: "library",
     ownerId: row.created_by ?? null,
     fileUrl: row.file_url ?? "",
     fileName: row.file_name ?? "",

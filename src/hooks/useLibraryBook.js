@@ -4,9 +4,9 @@ import { getLibraryBook } from "../api/library";
 /**
  * Loads a single shared-library book by id. Re-runs when the id changes.
  *
- * Mirrors `useBook`: the resolved id is stored with the result so a previous
- * book is ignored during render instead of being reset with a synchronous
- * setState inside the effect.
+ * The resolved id is stored with the result so that, when `id` changes, the
+ * previous book is ignored during render instead of being reset with a
+ * synchronous setState inside the effect.
  */
 export function useLibraryBook(id) {
   const [result, setResult] = useState({
