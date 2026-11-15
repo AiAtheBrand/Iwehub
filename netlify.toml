@@ -1,0 +1,16 @@
+# Netlify configuration for IweHub.
+#
+# Used when the repo is connected to Netlify (Git deploy). For a drag-and-drop
+# deploy of `dist/`, the same fallback is provided by `public/_redirects`.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback: serve index.html for any path so client-side routes such as
+# /library/<id> work on refresh and on direct links. Status 200 (not 301)
+# keeps the URL intact while returning the app shell.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
