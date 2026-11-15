@@ -158,6 +158,47 @@ automatically when an authenticated user inserts a row.
 - There are no server-side secrets any more — the old RapidAPI proxy and key
   were removed, so no API key is shipped or stored.
 
+## Deploying to Vercel
+
+The app is a static SPA that talks to Supabase directly, so it deploys as a
+normal Vite site. [`vercel.json`](vercel.json) is already set up.
+
+1. **Import the repo** at [vercel.com/new](https://vercel.com/new) and pick the
+   `bookStore` repository. Vercel auto-detects Vite:
+
+   | Setting | Value |
+   | --- | --- |
+   | Framework preset | Vite |
+   | Build command | `npm run build` |
+   | Output directory | `dist` |
+   | Install command | `npm install` |
+
+2. **Add the environment variables** (Project → Settings → Environment
+   Variables). Vite inlines `VITE_*` values at **build time**, so they must be
+   present before the first build — adding them later requires a redeploy:
+
+   ```
+   VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
+
+3. **Point Supabase at the deployed domain.** In the Supabase dashboard →
+   **Authentication → URL Configuration**, set the **Site URL** and add the
+   Vercel domain to **Redirect URLs**, otherwise sign-in links will point at
+   `localhost`.
+
+4. **Set up email delivery for real users.** The default Supabase email service
+   only delivers to project members and is rate-limited. Configure **custom
+   SMTP** (Authentication → Emails) and turn on **Confirm email** before opening
+   the app to the public.
+
+### Why `vercel.json` matters
+
+The router (`createBrowserRouter`) uses real paths such as `/library/<id>`.
+`vercel.json` rewrites every unknown path back to `/index.html` so those deep
+links load the app instead of returning a 404 on refresh. Without it, only the
+home page would work on a hard refresh.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs install, lint, tests and build on every push to
