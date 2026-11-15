@@ -69,7 +69,7 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "Shared Book" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/number of books: 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 book/i)).toBeInTheDocument();
   });
 
   it("shows an error message when the request fails", async () => {
@@ -115,7 +115,7 @@ describe("App", () => {
     expect(
       screen.queryByRole("heading", { name: "Pride and Prejudice" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText(/number of books: 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 book/i)).toBeInTheDocument();
   });
 
   it("shows the signed-in user and the add button when authenticated", async () => {
@@ -123,9 +123,7 @@ describe("App", () => {
 
     await screen.findByText(/no books found/i);
 
-    expect(
-      screen.getByText(/signed in as reader@example.com/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText("reader@example.com")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /^add book$/i }),
     ).toBeInTheDocument();

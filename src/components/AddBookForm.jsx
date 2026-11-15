@@ -92,7 +92,10 @@ function AddBookForm({ onAdd }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+    <form
+      onSubmit={handleSubmit}
+      className="mt-6 space-y-3 rounded-lg border border-gray-200 bg-white p-5"
+    >
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
           type="text"
@@ -100,7 +103,7 @@ function AddBookForm({ onAdd }) {
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Book title"
           aria-label="Book title"
-          className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
+          className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-900"
         />
 
         <input
@@ -109,7 +112,7 @@ function AddBookForm({ onAdd }) {
           onChange={(event) => setAuthor(event.target.value)}
           placeholder="Author (optional)"
           aria-label="Author"
-          className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
+          className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-900"
         />
       </div>
 
@@ -119,7 +122,7 @@ function AddBookForm({ onAdd }) {
         placeholder="Description (optional)"
         aria-label="Description"
         rows={3}
-        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
+        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-900"
       />
 
       <input
@@ -128,7 +131,7 @@ function AddBookForm({ onAdd }) {
         onChange={(event) => setSubjects(event.target.value)}
         placeholder="Subjects, separated by commas (optional)"
         aria-label="Subjects"
-        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
+        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-900"
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -145,7 +148,7 @@ function AddBookForm({ onAdd }) {
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-600"
+            className="text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-blue-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-800"
           />
           <span className="text-xs text-gray-500">
             The book&rsquo;s front cover (image file, up to {MAX_UPLOAD_LABEL})
@@ -156,7 +159,7 @@ function AddBookForm({ onAdd }) {
           <img
             src={coverImage}
             alt="Cover preview"
-            className="h-16 w-12 rounded object-cover ring-1 ring-gray-200"
+            className="h-16 w-12 rounded border border-gray-200 object-cover"
           />
         )}
       </div>
@@ -181,7 +184,7 @@ function AddBookForm({ onAdd }) {
             type="file"
             accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.zip,application/epub+zip,application/pdf,text/plain"
             onChange={handleBookFileChange}
-            className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-600"
+            className="text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-blue-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-800"
           />
           <span className="text-xs text-gray-500">
             The actual book to download (EPUB, PDF, MOBI, AZW3, FB2, TXT or ZIP,
@@ -197,7 +200,7 @@ function AddBookForm({ onAdd }) {
 
         <button
           type="submit"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 sm:ml-auto"
+          className="rounded-md bg-blue-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-800 sm:ml-auto"
         >
           Add book
         </button>

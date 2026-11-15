@@ -67,87 +67,91 @@ function Library({ user, onSignOut }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-10">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-4xl font-bold text-blue-600">Gutenberg Books</h1>
+    <div className="min-h-screen bg-gray-50">
+      <header className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-5">
+          <h1 className="text-2xl font-semibold tracking-tight text-blue-900">
+            BookNest
+          </h1>
 
-        {user && (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-gray-700">
-              Signed in as {user.email}
-            </span>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-6 flex flex-col items-start gap-3">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by title or author"
-          aria-label="Search books"
-          className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
-        />
-
-        <button
-          type="button"
-          onClick={() => setShowForm((visible) => !visible)}
-          aria-expanded={showForm}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-        >
-          {showForm ? "Cancel" : "Add book"}
-        </button>
-      </div>
-
-      {showForm && <AddBookForm onAdd={handleAdd} />}
-
-      {loading && (
-        <p className="mt-4 text-gray-600" role="status">
-          Loading books…
-        </p>
-      )}
-
-      {error && (
-        <p className="mt-4 text-red-600" role="alert">
-          Could not load books. Please try again later.
-        </p>
-      )}
-
-      {actionError && (
-        <p className="mt-4 text-red-600" role="alert">
-          Something went wrong: {actionError.message}
-        </p>
-      )}
-
-      {!loading && !error && (
-        <>
-          <p className="mt-4 text-gray-600">
-            Number of books: {books.length}
-          </p>
-
-          {books.length === 0 ? (
-            <p className="mt-8 text-gray-500">No books found.</p>
-          ) : (
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {books.map((book) => (
-                <BookCard
-                  key={book.id}
-                  book={book}
-                  onDelete={canDelete(book) ? handleDelete : undefined}
-                />
-              ))}
+          {user && (
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="text-sm text-gray-500">{user.email}</span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+              >
+                Sign out
+              </button>
             </div>
           )}
-        </>
-      )}
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-6 py-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by title or author"
+            aria-label="Search books"
+            className="w-full max-w-sm rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-900"
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowForm((visible) => !visible)}
+            aria-expanded={showForm}
+            className="rounded-md bg-blue-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-800"
+          >
+            {showForm ? "Cancel" : "Add book"}
+          </button>
+        </div>
+
+        {showForm && <AddBookForm onAdd={handleAdd} />}
+
+        {loading && (
+          <p className="mt-6 text-sm text-gray-500" role="status">
+            Loading books…
+          </p>
+        )}
+
+        {error && (
+          <p className="mt-6 text-sm text-red-600" role="alert">
+            Could not load books. Please try again later.
+          </p>
+        )}
+
+        {actionError && (
+          <p className="mt-6 text-sm text-red-600" role="alert">
+            Something went wrong: {actionError.message}
+          </p>
+        )}
+
+        {!loading && !error && (
+          <>
+            <p className="mt-6 text-sm text-gray-500">
+              {books.length} {books.length === 1 ? "book" : "books"}
+            </p>
+
+            {books.length === 0 ? (
+              <p className="mt-10 text-sm text-gray-500">No books found.</p>
+            ) : (
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {books.map((book) => (
+                  <BookCard
+                    key={book.id}
+                    book={book}
+                    onDelete={canDelete(book) ? handleDelete : undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </main>
     </div>
   );
 }

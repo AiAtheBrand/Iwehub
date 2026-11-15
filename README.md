@@ -1,4 +1,4 @@
-# Gutenberg Books
+# BookNest
 
 A React single-page app for a **shared book library**. **Signed-in users** add
 books (title, author, description, subjects, a cover image and the book file

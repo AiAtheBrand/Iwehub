@@ -18,15 +18,17 @@ function AuthGate() {
 
   if (configured && (loading || !user)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
-        <div className="w-full max-w-md">
-          <h1 className="text-4xl font-bold text-blue-600">Gutenberg Books</h1>
-          <p className="mt-2 text-gray-600">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
+        <div className="w-full max-w-sm">
+          <h1 className="text-3xl font-semibold tracking-tight text-blue-900">
+            BookNest
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
             Sign in or create an account to browse and share books.
           </p>
 
           {loading ? (
-            <p className="mt-6 text-gray-600" role="status">
+            <p className="mt-8 text-sm text-gray-500" role="status">
               Loading…
             </p>
           ) : (

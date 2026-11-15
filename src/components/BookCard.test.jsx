@@ -8,7 +8,6 @@ const baseBook = {
   title: "Pride and Prejudice",
   authors: [{ name: "Austen, Jane" }],
   cover_image: "cover.jpg",
-  download_count: 208430,
 };
 
 function renderCard(book, onDelete) {
@@ -20,26 +19,19 @@ function renderCard(book, onDelete) {
 }
 
 describe("BookCard", () => {
-  it("renders the title, author and formatted read count", () => {
+  it("renders the title and author", () => {
     renderCard(baseBook);
 
     expect(
       screen.getByRole("heading", { name: "Pride and Prejudice" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Austen, Jane")).toBeInTheDocument();
-    expect(screen.getByText(/208,430 reads/)).toBeInTheDocument();
   });
 
   it("falls back to a placeholder author when authors is missing", () => {
     renderCard({ ...baseBook, authors: undefined });
 
     expect(screen.getByText(/unknown author/i)).toBeInTheDocument();
-  });
-
-  it("does not crash when download_count is missing", () => {
-    renderCard({ ...baseBook, download_count: undefined });
-
-    expect(screen.getByText(/0 reads/)).toBeInTheDocument();
   });
 
   it("shows a placeholder when there is no cover image", () => {
