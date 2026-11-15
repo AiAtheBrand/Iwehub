@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import AuthForm from "./AuthForm";
+import Logo from "./Logo";
 import { useAuth } from "../hooks/useAuth";
 
 /**
@@ -20,8 +21,9 @@ function AuthGate() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
         <div className="w-full max-w-sm">
-          <h1 className="text-3xl font-semibold tracking-tight text-blue-900">
-            BookNest
+          <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight text-blue-900">
+            <Logo className="h-7 w-7" />
+            IweHub
           </h1>
           <p className="mt-2 text-sm text-gray-500">
             Sign in or create an account to browse and share books.

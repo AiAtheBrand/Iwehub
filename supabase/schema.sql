@@ -1,5 +1,5 @@
 -- ============================================================================
--- BookNest - Supabase schema
+-- IweHub - Supabase schema
 -- Run this in the Supabase dashboard: SQL Editor -> New query -> paste -> Run.
 -- Safe to re-run: it drops and recreates the policies.
 -- ============================================================================

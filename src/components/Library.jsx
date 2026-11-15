@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import BookCard from "./BookCard";
 import AddBookForm from "./AddBookForm";
+import Logo from "./Logo";
 import { useLibraryBooks } from "../hooks/useLibraryBooks";
 
 /**
@@ -70,8 +71,9 @@ function Library({ user, onSignOut }) {
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-5">
-          <h1 className="text-2xl font-semibold tracking-tight text-blue-900">
-            BookNest
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-blue-900">
+            <Logo className="h-6 w-6" />
+            IweHub
           </h1>
 
           {user && (
