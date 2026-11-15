@@ -70,6 +70,15 @@ create policy "Authenticated users can upload covers"
   to authenticated
   with check (bucket_id = 'covers');
 
+-- DELETE: only the user who uploaded the object. This lets removing a book
+-- also clean up its cover instead of leaving it orphaned in Storage.
+-- (`owner_id` is the current ownership column; `owner` is deprecated.)
+drop policy if exists "Users can delete their own covers" on storage.objects;
+create policy "Users can delete their own covers"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'covers' and owner_id = (select auth.uid()::text));
+
 -- ---------------------------------------------------------------------------
 -- Storage bucket for the uploaded book files themselves.
 -- ---------------------------------------------------------------------------
@@ -87,3 +96,11 @@ create policy "Authenticated users can upload book files"
   on storage.objects for insert
   to authenticated
   with check (bucket_id = 'book-files');
+
+-- DELETE: only the user who uploaded the file, so removing a book can also
+-- clean up the book file instead of leaving it orphaned in Storage.
+drop policy if exists "Users can delete their own book files" on storage.objects;
+create policy "Users can delete their own book files"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'book-files' and owner_id = (select auth.uid()::text));

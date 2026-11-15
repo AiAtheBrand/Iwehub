@@ -2,11 +2,19 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddBookForm from "./AddBookForm";
+import { MAX_UPLOAD_BYTES } from "../lib/limits";
 
 const pngFile = new File(["fake-bytes"], "cover.png", { type: "image/png" });
 const epubFile = new File(["fake-epub"], "book.epub", {
   type: "application/epub+zip",
 });
+
+/** A File whose reported size is just over the upload limit. */
+function oversizedFile(name, type) {
+  const file = new File(["x"], name, { type });
+  Object.defineProperty(file, "size", { value: MAX_UPLOAD_BYTES + 1 });
+  return file;
+}
 
 describe("AddBookForm", () => {
   it("calls onAdd with a new book and clears the fields", async () => {
@@ -131,5 +139,47 @@ describe("AddBookForm", () => {
     await user.click(screen.getByRole("button", { name: /add book/i }));
 
     expect(screen.queryByText("book.epub")).not.toBeInTheDocument();
+  });
+
+  it("rejects a book file larger than the limit", async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(<AddBookForm onAdd={onAdd} />);
+
+    await user.type(screen.getByLabelText("Book title"), "Huge Book");
+    await user.upload(
+      screen.getByLabelText("Book file"),
+      oversizedFile("huge.epub", "application/epub+zip"),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /20 MB or smaller/i,
+    );
+    expect(screen.queryByText("huge.epub")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /add book/i }));
+
+    expect(onAdd.mock.calls[0][0].file).toBeNull();
+  });
+
+  it("rejects a cover image larger than the limit", async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(<AddBookForm onAdd={onAdd} />);
+
+    await user.type(screen.getByLabelText("Book title"), "Big Cover");
+    await user.upload(
+      screen.getByLabelText("Cover image"),
+      oversizedFile("big.png", "image/png"),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /20 MB or smaller/i,
+    );
+    expect(screen.queryByAltText("Cover preview")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /add book/i }));
+
+    expect(onAdd.mock.calls[0][0].cover_image).toBe("");
   });
 });

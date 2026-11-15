@@ -39,6 +39,11 @@ Browser ──▶ React
 - Adding a book requires **signing in**. Deleting a **library** book is allowed
   only for the user who added it; deleting a **catalogue** book only hides it
   locally (stored in `localStorage`).
+- Deleting a library book also deletes its uploaded cover and book file, so no
+  orphaned files are left behind in Storage.
+- Uploads are limited to **20 MB per file** (see
+  [`src/lib/limits.js`](src/lib/limits.js)); the form rejects larger files
+  immediately and the API layer enforces the same limit again.
 
 ## Getting started
 
@@ -59,7 +64,8 @@ Browser ──▶ React
    1. Create a project at [supabase.com](https://supabase.com).
    2. Open **SQL Editor → New query**, paste the contents of
       [`supabase/schema.sql`](supabase/schema.sql), and run it. This creates the
-      `books` table, the `covers` storage bucket, and the access policies.
+      `books` table, the `covers` and `book-files` storage buckets, and the
+      access policies.
    3. Enable email auth: **Authentication → Providers → Email** and make sure
       it is on. New sign-ups must **confirm their email** before they can sign
       in (this is the default). For quick local testing you can turn
@@ -138,6 +144,7 @@ rules on the server, so the client can never bypass them:
 | Delete a book | only the user who created it (`auth.uid() = created_by`) |
 | Read covers / book files | everyone |
 | Upload a cover / book file | signed-in users |
+| Delete a cover / book file | only the user who uploaded it (`owner_id = auth.uid()`) |
 
 Because `created_by` defaults to `auth.uid()`, the database stamps ownership
 automatically when an authenticated user inserts a row.

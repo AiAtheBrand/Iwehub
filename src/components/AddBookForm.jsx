@@ -1,16 +1,21 @@
 import { useRef, useState } from "react";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "../lib/limits";
 
 /**
  * A small form that adds a book to the shared library.
  * The cover image is read from the chosen file and stored as a data URL so it
  * can be previewed; the book file itself is kept as a File and uploaded by the
  * API layer.
+ *
+ * Files larger than MAX_UPLOAD_BYTES are rejected here so the user finds out
+ * immediately, before anything is uploaded.
  */
 function AddBookForm({ onAdd }) {
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [coverImage, setCoverImage] = useState("");
   const [bookFile, setBookFile] = useState(null);
+  const [fileError, setFileError] = useState("");
   const fileInputRef = useRef(null);
   const bookFileInputRef = useRef(null);
 
@@ -22,13 +27,31 @@ function AddBookForm({ onAdd }) {
       return;
     }
 
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setFileError(`Cover image must be ${MAX_UPLOAD_LABEL} or smaller.`);
+      setCoverImage("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setFileError("");
     const reader = new FileReader();
     reader.onload = () => setCoverImage(String(reader.result));
     reader.readAsDataURL(file);
   }
 
   function handleBookFileChange(event) {
-    setBookFile(event.target.files?.[0] ?? null);
+    const file = event.target.files?.[0] ?? null;
+
+    if (file && file.size > MAX_UPLOAD_BYTES) {
+      setFileError(`Book file must be ${MAX_UPLOAD_LABEL} or smaller.`);
+      setBookFile(null);
+      if (bookFileInputRef.current) bookFileInputRef.current.value = "";
+      return;
+    }
+
+    setFileError("");
+    setBookFile(file);
   }
 
   function handleSubmit(event) {
@@ -53,6 +76,7 @@ function AddBookForm({ onAdd }) {
     setAuthor("");
     setCoverImage("");
     setBookFile(null);
+    setFileError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (bookFileInputRef.current) bookFileInputRef.current.value = "";
   }
@@ -97,6 +121,12 @@ function AddBookForm({ onAdd }) {
           />
         )}
       </div>
+
+      {fileError && (
+        <p role="alert" className="text-sm text-red-600">
+          {fileError}
+        </p>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <input

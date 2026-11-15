@@ -3,6 +3,7 @@ import {
   COVERS_BUCKET,
   supabase,
 } from "../lib/supabase";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "../lib/limits";
 
 const NOT_CONFIGURED =
   "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.";
@@ -38,6 +39,36 @@ function extensionOf(name) {
   return match ? match[0].toLowerCase() : "";
 }
 
+/**
+ * Recover a Storage object path from its public URL, e.g.
+ *   ".../storage/v1/object/public/covers/abc" -> "abc"
+ * Returns null when the URL is missing or belongs to a different bucket.
+ */
+function storagePathFromPublicUrl(bucket, publicUrl) {
+  if (!publicUrl) return null;
+
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const index = publicUrl.indexOf(marker);
+  if (index === -1) return null;
+
+  const path = publicUrl.slice(index + marker.length).split("?")[0];
+  return path ? decodeURIComponent(path) : null;
+}
+
+/**
+ * Delete one Storage object, deriving its path from its public URL.
+ *
+ * Best effort: called after the database row is already gone, so a failure
+ * here (for example a missing DELETE policy) must not surface as a failed
+ * delete. The row is what the user sees.
+ */
+async function removeStorageObject(bucket, publicUrl) {
+  const path = storagePathFromPublicUrl(bucket, publicUrl);
+  if (!path) return;
+
+  await supabase.storage.from(bucket).remove([path]);
+}
+
 /** Fetch every book in the shared library, newest first. */
 export async function listLibraryBooks() {
   if (!supabase) return [];
@@ -58,6 +89,9 @@ export async function listLibraryBooks() {
  * - the cover image (a base64 data URL from the picker) -> `covers` bucket
  * - the book file itself (a File) -> `book-files` bucket
  * Only their public URLs are written to the row.
+ *
+ * Files over MAX_UPLOAD_BYTES are rejected here as well as in the form, so the
+ * limit holds even if this function is called directly.
  */
 export async function addLibraryBook(draft) {
   if (!supabase) throw new Error(NOT_CONFIGURED);
@@ -66,6 +100,11 @@ export async function addLibraryBook(draft) {
 
   if (draft.cover_image?.startsWith("data:")) {
     const blob = dataUrlToBlob(draft.cover_image);
+
+    if (blob.size > MAX_UPLOAD_BYTES) {
+      throw new Error(`Cover image must be ${MAX_UPLOAD_LABEL} or smaller.`);
+    }
+
     const path = crypto.randomUUID();
 
     const { error: uploadError } = await supabase.storage
@@ -83,6 +122,10 @@ export async function addLibraryBook(draft) {
   let fileName = "";
 
   if (draft.file) {
+    if (draft.file.size > MAX_UPLOAD_BYTES) {
+      throw new Error(`Book file must be ${MAX_UPLOAD_LABEL} or smaller.`);
+    }
+
     const path = `${crypto.randomUUID()}${extensionOf(draft.file.name)}`;
 
     const { error: uploadError } = await supabase.storage
@@ -116,10 +159,30 @@ export async function addLibraryBook(draft) {
   return toBook(data);
 }
 
-/** Remove a book from the shared library. */
+/**
+ * Remove a book from the shared library, including its uploaded files.
+ *
+ * The row is read first so the cover and book file can be cleaned up from
+ * Storage afterwards. Deleting only the row would leave those objects behind
+ * as orphans: still stored, still publicly reachable, but no longer referenced
+ * by anything in the app.
+ */
 export async function deleteLibraryBook(id) {
   if (!supabase) throw new Error(NOT_CONFIGURED);
 
+  const { data: row, error: readError } = await supabase
+    .from("books")
+    .select("cover_url, file_url")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (readError) throw readError;
+
   const { error } = await supabase.from("books").delete().eq("id", id);
   if (error) throw error;
+
+  await Promise.all([
+    removeStorageObject(COVERS_BUCKET, row?.cover_url),
+    removeStorageObject(BOOK_FILES_BUCKET, row?.file_url),
+  ]);
 }
