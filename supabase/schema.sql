@@ -12,6 +12,8 @@ create table if not exists public.books (
   cover_url text,
   file_url text,
   file_name text,
+  summary text,
+  subjects text[],
   created_by uuid default auth.uid() references auth.users (id) on delete cascade,
   created_at timestamptz not null default now()
 );
@@ -26,6 +28,12 @@ alter table public.books
 
 alter table public.books
   add column if not exists file_name text;
+
+alter table public.books
+  add column if not exists summary text;
+
+alter table public.books
+  add column if not exists subjects text[];
 
 alter table public.books enable row level security;
 

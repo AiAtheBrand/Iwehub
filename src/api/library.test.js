@@ -14,7 +14,7 @@ vi.mock("../lib/supabase", () => ({
   },
 }));
 
-import { addLibraryBook, deleteLibraryBook } from "./library";
+import { addLibraryBook, deleteLibraryBook, getLibraryBook } from "./library";
 import { MAX_UPLOAD_BYTES } from "../lib/limits";
 
 const PUBLIC = "https://project.supabase.co/storage/v1/object/public";
@@ -48,6 +48,33 @@ describe("addLibraryBook", () => {
       /20 MB/,
     );
     expect(storageFrom).not.toHaveBeenCalled();
+  });
+});
+
+describe("getLibraryBook", () => {
+  it("maps the summary and subjects from the row", async () => {
+    mockBooks({
+      id: "lib-1",
+      title: "Detailed Book",
+      author: "Someone",
+      cover_url: null,
+      file_url: null,
+      file_name: null,
+      summary: "A short summary.",
+      subjects: ["Adventure", "Classics"],
+      created_by: "user-1",
+    });
+
+    const book = await getLibraryBook("lib-1");
+
+    expect(book.summary).toBe("A short summary.");
+    expect(book.subjects).toEqual(["Adventure", "Classics"]);
+  });
+
+  it("returns null when the row does not exist", async () => {
+    mockBooks(null);
+
+    expect(await getLibraryBook("missing")).toBeNull();
   });
 });
 

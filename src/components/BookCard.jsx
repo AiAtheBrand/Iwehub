@@ -36,15 +36,19 @@ function BookCard({ book, onDelete }) {
           </span>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {book.source !== "library" && (
-              <button
-                type="button"
-                onClick={() => navigate(`/books/${book.id}`)}
-                className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
-              >
-                View
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  book.source === "library"
+                    ? `/library/${book.id}`
+                    : `/books/${book.id}`,
+                )
+              }
+              className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
+            >
+              View
+            </button>
 
             {download && (
               <a

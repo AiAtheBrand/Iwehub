@@ -58,6 +58,36 @@ describe("AddBookForm", () => {
     expect(onAdd.mock.calls[0][0].authors).toEqual([]);
   });
 
+  it("includes the description and subjects in the draft", async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(<AddBookForm onAdd={onAdd} />);
+
+    await user.type(screen.getByLabelText("Book title"), "Detailed Book");
+    await user.type(screen.getByLabelText("Description"), "A short summary.");
+    await user.type(
+      screen.getByLabelText("Subjects"),
+      "Adventure, Classics ,  ",
+    );
+    await user.click(screen.getByRole("button", { name: /add book/i }));
+
+    const added = onAdd.mock.calls[0][0];
+    expect(added.summary).toBe("A short summary.");
+    expect(added.subjects).toEqual(["Adventure", "Classics"]);
+  });
+
+  it("sends an empty subjects array and summary when left blank", async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(<AddBookForm onAdd={onAdd} />);
+
+    await user.type(screen.getByLabelText("Book title"), "Plain Book");
+    await user.click(screen.getByRole("button", { name: /add book/i }));
+
+    expect(onAdd.mock.calls[0][0].subjects).toEqual([]);
+    expect(onAdd.mock.calls[0][0].summary).toBe("");
+  });
+
   it("includes the uploaded image as a data URL", async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();

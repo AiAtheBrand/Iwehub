@@ -191,7 +191,10 @@ describe("App", () => {
 
     expect(screen.getByLabelText("Book title")).toBeInTheDocument();
     expect(screen.getByLabelText("Author")).toBeInTheDocument();
+    expect(screen.getByLabelText("Description")).toBeInTheDocument();
+    expect(screen.getByLabelText("Subjects")).toBeInTheDocument();
     expect(screen.getByLabelText("Cover image")).toBeInTheDocument();
+    expect(screen.getByLabelText("Book file")).toBeInTheDocument();
   });
 
   it("adds a book to the shared library and hides the form", async () => {

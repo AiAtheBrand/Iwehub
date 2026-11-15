@@ -33,9 +33,13 @@ Browser ──▶ React
 ```
 
 - The **Gutenberg catalogue** is read-only and fetched through the Express proxy.
+  Each book has a **View** page (`/books/:id`) with its description, subjects and
+  per-format downloads.
 - The **shared library** (books users add) lives in Supabase and is visible to
-  everyone. Cover images **and the book files themselves** are uploaded to
-  Supabase Storage, so shared books can be downloaded by anyone.
+  everyone. A book captures a title, author, description, subjects, cover image
+  **and the book file itself**, all uploaded to Supabase Storage, so shared
+  books can be downloaded by anyone. Library books have their own **View** page
+  (`/library/:id`) with a single Download button.
 - Adding a book requires **signing in**. Deleting a **library** book is allowed
   only for the user who added it; deleting a **catalogue** book only hides it
   locally (stored in `localStorage`).

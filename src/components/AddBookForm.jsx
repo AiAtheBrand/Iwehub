@@ -13,6 +13,8 @@ import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "../lib/limits";
 function AddBookForm({ onAdd }) {
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
+  const [summary, setSummary] = useState("");
+  const [subjects, setSubjects] = useState("");
   const [coverImage, setCoverImage] = useState("");
   const [bookFile, setBookFile] = useState(null);
   const [fileError, setFileError] = useState("");
@@ -66,6 +68,12 @@ function AddBookForm({ onAdd }) {
       id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       title: trimmedTitle,
       authors: trimmedAuthor ? [{ name: trimmedAuthor }] : [],
+      summary: summary.trim(),
+      // "Adventure, Classics" -> ["Adventure", "Classics"]
+      subjects: subjects
+        .split(",")
+        .map((subject) => subject.trim())
+        .filter(Boolean),
       cover_image: coverImage,
       file: bookFile,
       file_name: bookFile?.name ?? "",
@@ -74,6 +82,8 @@ function AddBookForm({ onAdd }) {
 
     setTitle("");
     setAuthor("");
+    setSummary("");
+    setSubjects("");
     setCoverImage("");
     setBookFile(null);
     setFileError("");
@@ -102,6 +112,24 @@ function AddBookForm({ onAdd }) {
           className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
         />
       </div>
+
+      <textarea
+        value={summary}
+        onChange={(event) => setSummary(event.target.value)}
+        placeholder="Description (optional)"
+        aria-label="Description"
+        rows={3}
+        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
+      />
+
+      <input
+        type="text"
+        value={subjects}
+        onChange={(event) => setSubjects(event.target.value)}
+        placeholder="Subjects, separated by commas (optional)"
+        aria-label="Subjects"
+        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <input

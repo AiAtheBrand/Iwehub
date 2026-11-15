@@ -132,11 +132,25 @@ describe("BookCard", () => {
     );
   });
 
-  it("hides the View button for shared-library books", () => {
-    renderCard({ ...baseBook, source: "library" });
+  it("navigates to the library detail route for a shared-library book", () => {
+    function Location() {
+      return <div data-testid="location">{useLocation().pathname}</div>;
+    }
 
-    expect(
-      screen.queryByRole("button", { name: /view/i }),
-    ).not.toBeInTheDocument();
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route
+            path="/"
+            element={<BookCard book={{ ...baseBook, source: "library" }} />}
+          />
+          <Route path="/library/:id" element={<Location />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /view/i }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent("/library/1342");
   });
 });

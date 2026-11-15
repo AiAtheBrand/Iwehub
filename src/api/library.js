@@ -20,6 +20,8 @@ function toBook(row) {
     ownerId: row.created_by ?? null,
     fileUrl: row.file_url ?? "",
     fileName: row.file_name ?? "",
+    summary: row.summary ?? "",
+    subjects: Array.isArray(row.subjects) ? row.subjects : [],
   };
 }
 
@@ -80,6 +82,20 @@ export async function listLibraryBooks() {
 
   if (error) throw error;
   return data.map(toBook);
+}
+
+/** Fetch a single shared-library book by id, or null when it does not exist. */
+export async function getLibraryBook(id) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("books")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? toBook(data) : null;
 }
 
 /**
@@ -151,6 +167,8 @@ export async function addLibraryBook(draft) {
       cover_url: coverUrl,
       file_url: fileUrl,
       file_name: fileName,
+      summary: draft.summary?.trim() ? draft.summary.trim() : null,
+      subjects: draft.subjects ?? [],
     })
     .select()
     .single();
