@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import App from "./App";
+import AuthGate from "./components/AuthGate";
+import BookDetails from "./components/BookDetails";
+import LibraryBookDetails from "./components/LibraryBookDetails";
 import * as api from "./api/books";
 import * as library from "./api/library";
 import { useAuth } from "./hooks/useAuth";
@@ -50,10 +53,16 @@ function makeLibraryBook(overrides) {
   };
 }
 
-function renderApp() {
+function renderApp(initialEntries = ["/"]) {
   return render(
-    <MemoryRouter>
-      <App />
+    <MemoryRouter initialEntries={initialEntries}>
+      <Routes>
+        <Route element={<AuthGate />}>
+          <Route path="/" element={<App />} />
+          <Route path="/books/:id" element={<BookDetails />} />
+          <Route path="/library/:id" element={<LibraryBookDetails />} />
+        </Route>
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -61,7 +70,9 @@ function renderApp() {
 describe("App", () => {
   beforeEach(() => {
     api.getBooks.mockReset();
+    api.getBook.mockReset();
     library.listLibraryBooks.mockReset().mockResolvedValue([]);
+    library.getLibraryBook.mockReset();
     library.addLibraryBook.mockReset();
     library.deleteLibraryBook.mockReset().mockResolvedValue(undefined);
     useAuth.mockReturnValue(authState());
@@ -175,6 +186,39 @@ describe("App", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent(/loading/i);
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+  });
+
+  it("gates the catalogue detail route behind sign-in", async () => {
+    useAuth.mockReturnValue(authState({ user: null }));
+
+    renderApp(["/books/1342"]);
+
+    expect(
+      await screen.findByRole("heading", { name: /sign in/i }),
+    ).toBeInTheDocument();
+    expect(api.getBook).not.toHaveBeenCalled();
+  });
+
+  it("gates the library detail route behind sign-in", async () => {
+    useAuth.mockReturnValue(authState({ user: null }));
+
+    renderApp(["/library/lib-1"]);
+
+    expect(
+      await screen.findByRole("heading", { name: /sign in/i }),
+    ).toBeInTheDocument();
+    expect(library.getLibraryBook).not.toHaveBeenCalled();
+  });
+
+  it("renders a detail route for a signed-in user", async () => {
+    api.getBook.mockResolvedValue(makeBook({ title: "Book One" }));
+
+    renderApp(["/books/1"]);
+
+    expect(
+      await screen.findByRole("heading", { name: "Book One" }),
+    ).toBeInTheDocument();
+    expect(api.getBook).toHaveBeenCalledWith("1");
   });
 
   it("reveals the add form only after clicking Add book", async () => {

@@ -43,6 +43,11 @@ Browser ──▶ React
 - Adding a book requires **signing in**. Deleting a **library** book is allowed
   only for the user who added it; deleting a **catalogue** book only hides it
   locally (stored in `localStorage`).
+- **Every page is gated behind sign-in.** All routes are children of an
+  `AuthGate` layout route ([`src/components/AuthGate.jsx`](src/components/AuthGate.jsx)),
+  so `/`, `/books/:id` and `/library/:id` all show the sign-in screen until a
+  session exists. (When Supabase is not configured the wall is skipped so the
+  app still runs.)
 - Deleting a library book also deletes its uploaded cover and book file, so no
   orphaned files are left behind in Storage.
 - Uploads are limited to **20 MB per file** (see
